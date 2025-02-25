@@ -2,7 +2,6 @@ package contrast
 
 import (
 	"image"
-	"fmt"
 	"math"
 )
 
@@ -34,7 +33,6 @@ func CalculatePixelEdgeDistances(img *image.RGBA, vertical bool) [][]float32{
 
 	for outer := 0; outer < sizes[1 - is_vertical] ; outer++ {
 		for inner := 0; inner < sizes[is_vertical] - 1 ; inner++ {
-			fmt.Println(outer, inner)
 			curr := [2]int {inner, outer}
 			next := [2]int {inner + 1, outer}
 

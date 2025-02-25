@@ -60,7 +60,6 @@ func MemReverse[T any](slice []T) {
 
 }
 
-// !UNTESTED!
 // MemReverseExtended: this function will reverse ordering of all elements in batch_sized batches
 // Will panic if length of slice is not divisible by batch_size, and if not (0 < batch_size <= len(slice))
 func MemReverseExtended[T any](slice []T, batch_size int){
@@ -70,7 +69,6 @@ func MemReverseExtended[T any](slice []T, batch_size int){
     if batch_size > len(slice) || batch_size < 1{
         panic("Batch size not in range. Required: (0 < batch_size <= len(slice))")
     }
-
 
     count_total := len(slice)
     count_items := count_total / batch_size

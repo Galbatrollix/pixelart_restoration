@@ -41,23 +41,35 @@ func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
 
 func main() {
 
-	// img, err := images.ImageLoadFromFile("../images/test/yellow_red_blue.png")
-	// if(err != nil){
-	// 	fmt.Println(err)
-	// 	panic(1)
-	// }
-	
-	// sliceRect := image.Rect(0,0,3,10)
-	// img = img.SubImage(sliceRect).(*image.RGBA)
-
-	img, err := images.ImageLoadFromFile("../images/test/gradient_1.png")
+	img, err := images.ImageLoadFromFile("../images/test/yellow_red_blue.png")
 	if(err != nil){
 		fmt.Println(err)
 		panic(1)
 	}
+	
+	sliceRect := image.Rect(0,0,3,10)
+	img = img.SubImage(sliceRect).(*image.RGBA)
+
 	fmt.Println(img)
+	img = images.ImageGetNormalized(img)
+	fmt.Println(img)
+	img = images.ImageGetTransposed(img)
+	fmt.Println(img)
+	err = images.ImageSaveToFile("../images/test/DUPA2.png", img)
+	if(err != nil){
+		fmt.Println(err)
+		panic(1)
+	}
+
+	// img, err := images.ImageLoadFromFile("../images/test/gradient_1.png")
+	// if(err != nil){
+	// 	fmt.Println(err)
+	// 	panic(1)
+	// }
+	// fmt.Println(img)
 
 	automaticGridDetectionMain(img)
+
 
 
 
