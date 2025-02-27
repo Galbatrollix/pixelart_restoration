@@ -1,25 +1,27 @@
 package contrast
 
+import (
+	"slices"
+)
+import (
+	"pixel_restoration/params"	
+)
+
+
 /*
+	CalculateMinPeakHeight approximates minimum peak height for optimal gridline detection
+    by analyzing all found distances.
 
-
+    Around 75 is generally good peak height value.
+    This function will return 100 if max possible distance was detected
+    Upper bound on returned value can be configured in params package
 */
 
-// def get_min_peak_height(all_distances, max_value=math.inf):
-//     """
-//     Guess minimum peak height for optimal gridline detection
-//     by analyzing distances array.
+func CalculateMinPeakHeight(all_distances []float32) float32{
+	const max_possible_color_diff float32 = 443.0
+	const base_height float32 = 100.0
 
-//     Around 75 is generally good peak height value.
-//     This function will return 100 if max possible distance was detected
-//     Otherwise it will return proportionally smaller value depending on highest distance found
-//     """
-//     image_max = np.max(all_distances)
-//     max_possible_color_diff = 443
-//     base_height = 100
-//     peak_height = image_max * base_height / max_possible_color_diff
-
-//     return min(peak_height, max_value)
-
-
-// func GetMinPeakHeight(all_distances []float32)
+	var dist_max float32 = slices.Max(all_distances)
+	min_peak_height := base_height * dist_max / max_possible_color_diff
+	return min(params.MinPeakHeightLimit, min_peak_height)
+}

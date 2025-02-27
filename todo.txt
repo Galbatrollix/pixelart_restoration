@@ -1,0 +1,30 @@
+1. Explore other ways to process imagaes instead of hand-rolled axis aligned edge detector 
+- https://medium.com/swlh/convolutional-neural-networks-22764af1c42a
+- https://pyimagesearch.com/2021/05/12/image-gradients-with-opencv-sobel-and-scharr/
+- https://aryamansharda.medium.com/how-image-edge-detection-works-b759baac01e2
+
+-- one way is to hand roll a way to score contrast jumps around nearby contrast jumps (in other rows) higher
+-- hough lines
+
+2. make gaussian kernel - for kuwahara, blur and other potential implementations
+- https://www.askpython.com/python-modules/numpy/gaussian-kernel-matrix-numpy
+
+3. Add resizing, noise adding, JPEG-ization and gridline adding tools/functions
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Jadzia projekt:
+SVG loading and exporting: 
+https://stackoverflow.com/questions/42993407/how-to-create-and-export-svg-to-png-jpeg
+PDFy: 
+https://github.com/go-pdf/fpdf

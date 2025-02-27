@@ -36,6 +36,31 @@ func ImageGetSplitChannels(img *image.RGBA) [3][]uint8 {
 }
 
 
+/*
+ImageGetGreyscaled makes a float32 slice. Slice values represent a greyscaled version of input image. 
+The returned slice assumes row major order.
+Greyscale algorithm used: Y = 0.299 * R + 0.587 * G + 0.114 *B
+*/
+func ImageGetGreyscaled(img *image.RGBA) []float32 {
+	var pixel_count int = img.Rect.Dy() * img.Rect.Dx()
+	greyscaled := make([]float32, pixel_count)
+
+	for y := 0 ; y < img.Rect.Dy() ; y++ {
+		for x := 0 ; x < img.Rect.Dx() ; x++ {
+			flat_id := img.PixOffset(x + img.Rect.Min.X, y + img.Rect.Min.Y)
+			greyscale_id := y * img.Rect.Dx() + x
+
+			greyscaled[greyscale_id] = (
+				0.299 * float32(img.Pix[flat_id + 0]) +
+				0.587 * float32(img.Pix[flat_id + 1]) +
+				0.114 * float32(img.Pix[flat_id + 2]))
+		}
+	}
+
+
+	return greyscaled
+
+}
 
 /*
 	ImageGetNormalized makes an entirely new RGBA image that represets the same image, but the rectangle starts at 0,0 
