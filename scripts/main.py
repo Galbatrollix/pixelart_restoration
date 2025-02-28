@@ -119,7 +119,7 @@ def kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.COLOR_R
 
     # preallocate these arrays
     avgs = np.empty((4, *image.shape), dtype=image.dtype)
-    print(avgs.shape)
+    # print(avgs.shape)
     stddevs = np.empty((4, *image.shape[:2]), dtype=image.dtype)
 
     if image.ndim == 3:
@@ -131,8 +131,8 @@ def kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.COLOR_R
         image_2d = image
         avgs_2d = avgs
 
-    print(*image_2d)
-    print(avgs_2d.shape)
+    # print(*image_2d)
+    # print(avgs_2d.shape)
     # Create a pixel-by-pixel square of the image
     squared_img = image_2d ** 2
 
@@ -153,6 +153,10 @@ def kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.COLOR_R
             kx = ky = kxy
         elif method == 'gaussian':
             kx, ky = klr[kindexes[k]]
+        # print(f"{kx = }")
+        # print(f"{ky = }")
+        # print(type(kx))
+
         cv2.sepFilter2D(image, -1, kx, ky, avgs[k], shift[k])
         if image_2d is not image:  # else, this is already done...
             cv2.sepFilter2D(image_2d, -1, kx, ky, avgs_2d[k], shift[k])
@@ -177,11 +181,9 @@ def apply_gaussian_kuwahara_filter(img_arr, radius=2, sigma=1.5):
     return kuwahara(img_arr, method='gaussian', radius=radius, sigma=sigma)
 
 
-#Y←0.299⋅R+0.587⋅G+0.114⋅B
 
 
-
-with PIL.Image.open(f'../images/test_set_pixelarts_grided/GRIDED_1.5_4.5_carps.png') as img:
+with PIL.Image.open(f'../images/test_set_pixelarts_clean/CLEAN_4_gigantic_difficulty_faces.png') as img:
     img.load()
 img = img.convert()
 img_arr = img_to_numpy_array(img)
@@ -192,4 +194,23 @@ kuwaharad_arr = apply_gaussian_kuwahara_filter(img_arr)
 
 kuwahard_img = img_from_numpy_array(kuwaharad_arr)
 kuwahard_img.save("../images/test/RESULT.png")
+
+
+
+
+# temp_image = np.zeros(shape=(1000, 1000)).astype(np.float32)
+# for y in range(len(temp_image)):
+#     for x in range(len(temp_image[0])):
+#         temp_image[y][x] = float(y) * 3.1 + 6.8 * float(x)
+
+# result = np.zeros(shape=(1000,1000)).astype(np.float32)
+
+# print(len(temp_image))
+# print(len(temp_image[0]))
+# kernelx = np.array([[1],[2],[5],[6]]).astype(np.float32)
+# print(type(kernelx))
+# kernely = np.array([[1],[2],[3],[4]]).astype(np.float32)
+# print(kernely)
+# cv2.sepFilter2D(temp_image, -1, kernelx, kernely, result, np.array([2,0]))
+
 

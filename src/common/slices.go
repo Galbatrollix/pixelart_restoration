@@ -1,23 +1,9 @@
 package common
 
 
-// Make2D will create a slice of slices of T, where all inner slices share common memory which can accessed flat
-// To access flat the first inner slice must be resliced to size of (height * width)
-func Make2D[T any](height, width int) [][]T{
-    buffer := make([]T, height*width)
-    
-    vector := make([][]T, height)
-    for i := range vector {
-        start := i * width
-        end := (i+1) * width
-        vector[i] = buffer[start:end]
-    }
-    return vector
-}
-
-
 // MemCopy: this function will copy all elements from source slice to destination slice. 
 // Will panic if source slice is larger than destination
+// UB if memory of destination and source overlaps
 func MemCopy[T any](to []T, from []T){
     for i := range from {
         to[i] = from[i]
@@ -34,6 +20,7 @@ func MemSet[T any](slice []T , val T){
 
 // MemRepeat: this function will repeat elements from sequence over and over an write them to target 
 // until target's length is reached. Will panic if provided sequence slice doesn't contain any elements
+// UB if inputs overlap
 func MemRepeat[T any](target []T, sequence []T){
     for i := range target {
         sequence_id := i % len(sequence)
@@ -43,6 +30,7 @@ func MemRepeat[T any](target []T, sequence []T){
 
 // MemSwap: this function will set swap all elements of left slice with all elements of right slice. 
 // Will panic on call with different lengthed slices
+// UB if inputs overlap
 func MemSwap[T any](left []T, right []T){
     for i := range left {
         left[i], right[i] = right[i], left[i]
