@@ -8,3 +8,4 @@ func Ternary[T any](condition bool, ifTrue T, ifFalse T) T {
     }
     
 }
+

@@ -158,11 +158,13 @@ def kuwahara(orig_img, method='mean', radius=3, sigma=None, grayconv=cv2.COLOR_R
         # print(type(kx))
 
         cv2.sepFilter2D(image, -1, kx, ky, avgs[k], shift[k])
+        print(avgs[k].shape, image.shape)
         if image_2d is not image:  # else, this is already done...
             cv2.sepFilter2D(image_2d, -1, kx, ky, avgs_2d[k], shift[k])
         cv2.sepFilter2D(squared_img, -1, kx, ky, stddevs[k], shift[k])
+
         stddevs[k] = stddevs[k] - avgs_2d[k] ** 2    # compute the final variance on subwindow
-        #stddevs[k] = - avgs_2d[k]
+
     # Choice of index with minimum variance
     indices = np.argmin(stddevs, axis=0)
 
@@ -183,14 +185,19 @@ def apply_gaussian_kuwahara_filter(img_arr, radius=2, sigma=1.5):
 
 
 
-with PIL.Image.open(f'../images/test_set_pixelarts_clean/CLEAN_4_gigantic_difficulty_faces.png') as img:
+with PIL.Image.open(f'../images/test/one_by_one.png') as img:
     img.load()
 img = img.convert()
 img_arr = img_to_numpy_array(img)
 
 # TESTING_SCAN_THROUGH_DIRECTORY("Images/test_set_pixelarts_clean")
-
+import time
+t0 = time.time()
 kuwaharad_arr = apply_gaussian_kuwahara_filter(img_arr)
+t1 = time.time()
+
+total_n = t1-t0
+print(total_n)
 
 kuwahard_img = img_from_numpy_array(kuwaharad_arr)
 kuwahard_img.save("../images/test/RESULT.png")
