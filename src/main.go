@@ -52,7 +52,7 @@ func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
 
 func main() {
 
-	img, err := images.ImageLoadFromFile("../images/test/one_by_one.png")
+	img, err := images.ImageLoadFromFile("../images/test_set_pixelarts_clean/CLEAN_4_gigantic_difficulty_faces.png")
 	if(err != nil){
 		fmt.Println(err)
 		panic(1)
