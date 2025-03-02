@@ -12,6 +12,7 @@ import (
 
 import(
 	"pixel_restoration/images"
+	"pixel_restoration/images/kuwahara"
 	"pixel_restoration/contrast"
 	_"pixel_restoration/common"
 )
@@ -47,10 +48,11 @@ func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
 	return nil, nil
 }
 
+
+
 func main() {
 
-
-	img, err := images.ImageLoadFromFile("../images/test_set_pixelarts_clean/CLEAN_4_gigantic_difficulty_faces.png")
+	img, err := images.ImageLoadFromFile("../images/test/one_by_one.png")
 	if(err != nil){
 		fmt.Println(err)
 		panic(1)
@@ -61,7 +63,7 @@ func main() {
 	// fmt.Println(images.ImageGetGreyscaledChannel(img))
 
 	start := time.Now()
-	kuwaharad:= images.KuwaharaGaussian(img, 2, 1.5)
+	kuwaharad:= kuwahara.KuwaharaGaussian(img, 2, 1.5)
     elapsed := time.Since(start)
     fmt.Println(elapsed)
 

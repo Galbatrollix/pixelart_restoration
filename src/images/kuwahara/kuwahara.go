@@ -1,37 +1,29 @@
-package images
+package kuwahara
 
 import (
 	"image"
 	"math"
-	_"fmt"
 )
 
 import (
 	"pixel_restoration/common"
+	"pixel_restoration/images"
 )
 
-
-// ( a  a  ab   b  b)
-// ( a  a  ab   b  b)
-// (ac ac abcd bd bd)
-// ( c  c  cd   d  d)
-// ( c  c  cd   d  d)
 
 func KuwaharaGaussian(img *image.RGBA, radius int, sigma float32) *image.RGBA{
 	if radius < 1 {
 		panic("Radius must be bigger than 0")
 	}
-
-	img_shape := [2]int{
-		img.Rect.Dy(),
-		img.Rect.Dx(),
+	if img.Rect.Dx() * img.Rect.Dy() == 0 {
+		panic("Image must have at least one pixel")
 	}
-	_ = img_shape
-	
+
 	// calculates sigma automatically if not provided with valid value
 	if sigma <= 0 {
-		sigma = 0.3*(float32(ksize-1)*0.5 - 1.0) + 0.8
+		sigma = 0.3* (float32(radius) - 1.0) + 0.8
 	}
+
 	// making two semi-kernels
 	kernel_base := GaussianKernel1D(radius * 2 + 1, sigma)
 	kernel_forward := kernel_base[:radius + 1]
@@ -57,24 +49,41 @@ func KuwaharaGaussian(img *image.RGBA, radius int, sigma float32) *image.RGBA{
 		{0     , radius},
 	} 
 
-	greyscale_channel := ImageGetGreyscaledChannel(img)
-	greyscale_channel_squared := sliceGetSquared(greyscale_channel)
-	greyscale := common.Make2DFromFlat(greyscale_channel, img.Rect.Dy(), img.Rect.Dx())
-	greyscale_squared := common.Make2DFromFlat(greyscale_channel_squared, img.Rect.Dy(), img.Rect.Dx())
+	img_shape := [2]int{
+		img.Rect.Dy(),
+		img.Rect.Dx(),
+	}
+	total_count := img_shape[0] * img_shape[1]
+
+	greyscale := images.ImageGetGreyscaledChannel(img)
+	greyscale_squared := sliceGetSquared(greyscale)
+
+	// reserving space for temporary buffers for SepFilter2D
+	temporary := make([]float32, total_count)
+	temporary2 := make([]float32, total_count)
+	temporary3 := make([]float32, total_count)
+
+	// making space for standard deviations array
+	var standard_deviations [4][]float32
+	stddevs_buffer := make([]float32, total_count * 4)
+	for i:= 0; i<4; i++{
+		standard_deviations[i] = stddevs_buffer[i * total_count : (i+1) * total_count]
+	}
 
 	// calculating standard deviations of each quadrant
-	var standard_deviations[4][][]float32
-
 	for kernel_id := 0; kernel_id < 4 ; kernel_id++{
-		greyscale_averages := SepFilter2D(
-			greyscale, kernel_quadrants[kernel_id], kernel_anchors[kernel_id],
+		greyscale_averages := temporary2
+		SepFilter2D(
+			greyscale, greyscale_averages, temporary,
+			img_shape, kernel_quadrants[kernel_id], kernel_anchors[kernel_id],
 		)
-		standard_deviations[kernel_id] = SepFilter2D(
-			greyscale_squared, kernel_quadrants[kernel_id], kernel_anchors[kernel_id],
+        SepFilter2D(
+			greyscale_squared,standard_deviations[kernel_id], temporary,
+			img_shape, kernel_quadrants[kernel_id], kernel_anchors[kernel_id],
 		)
 		sliceSubtractSquared(
-			standard_deviations[kernel_id][0][0: img.Rect.Dy() * img.Rect.Dx()],
-			greyscale_averages[0][0: img.Rect.Dy() * img.Rect.Dx()],
+			standard_deviations[kernel_id],
+			greyscale_averages,
 		)
 	}
 
@@ -85,7 +94,7 @@ func KuwaharaGaussian(img *image.RGBA, radius int, sigma float32) *image.RGBA{
 	var color_averages [4][3][]uint8
 	var channel_size int = img.Rect.Dy() * img.Rect.Dx()
 	color_averages_buffer := make([]uint8, 3 * 4 * channel_size)
-	for kernel_id := 0; kernel_id <4 ; kernel_id++{
+	for kernel_id := 0; kernel_id < 4 ; kernel_id++{
 		for channel_id := 0; channel_id < 3; channel_id++{
 			start := (kernel_id * 3 + channel_id) * channel_size
 			end := start + channel_size
@@ -94,39 +103,33 @@ func KuwaharaGaussian(img *image.RGBA, radius int, sigma float32) *image.RGBA{
 	}
 
 	// calculating color averages
-	channels := ImageGetSplitChannels(img)
-	channel_float := common.Make2D[float32]( img.Rect.Dy(), img.Rect.Dx())
-	channel_float_buffer := channel_float[0][0:img.Rect.Dy()* img.Rect.Dx() ]
-
+	channels := images.ImageGetSplitChannels(img)
+	channel_float := temporary2
+	averaged := temporary3
 
 	for channel_id := 0; channel_id < 3; channel_id++{
-		sliceUint8ToFloat32(channels[channel_id], channel_float_buffer)
+		sliceUint8ToFloat32(channels[channel_id], channel_float)
 		for kernel_id := 0; kernel_id < 4; kernel_id++ {
-			averaged := SepFilter2D(
-				channel_float, kernel_quadrants[kernel_id], kernel_anchors[kernel_id],
+		  	SepFilter2D(
+				channel_float , averaged, temporary,
+				img_shape, kernel_quadrants[kernel_id], kernel_anchors[kernel_id],
 			)
-			sliceFloat32ToUint8(averaged[0][0:img.Rect.Dy()* img.Rect.Dx()], color_averages[kernel_id][channel_id])
+			sliceFloat32ToUint8(averaged, color_averages[kernel_id][channel_id])
 		}
 	}
 
-
-
-	// fmt.Println(quadrants_chosen)
-	// fmt.Println(color_averages)
 	// choosing color averages according to quadrants chosen
-	new_rect := image.Rect(0,0,img.Rect.Dx(),img.Rect.Dy())
-	new_stride := img.Rect.Dx() * 4
-	new_data := make([]uint8, img.Rect.Dy()* img.Rect.Dx() * 4)
-	for y := 0; y < img.Rect.Dy() ; y++ {
-		for x:= 0;  x<img.Rect.Dx(); x++ {
-			flat_id := (y * img.Rect.Dx() + x)
-			flat_id_result := flat_id * 4
-			chosen_quadrant := quadrants_chosen[y][x]
-			new_data[flat_id_result + 0] = color_averages[chosen_quadrant][0][flat_id]
-			new_data[flat_id_result + 1] = color_averages[chosen_quadrant][1][flat_id]
-			new_data[flat_id_result + 2] = color_averages[chosen_quadrant][2][flat_id]
-			new_data[flat_id_result + 3] = 255        // alpha channel constant
-		} 
+	new_rect := image.Rect(0,0, img_shape[1], img_shape[0])
+	new_stride := img_shape[1] * 4
+	new_data := make([]uint8, total_count * 4)
+	for flat_id := 0; flat_id < total_count ; flat_id++ {
+		flat_id_result := flat_id * 4
+		chosen_quadrant := quadrants_chosen[flat_id]
+		new_data[flat_id_result + 0] = color_averages[chosen_quadrant][0][flat_id]
+		new_data[flat_id_result + 1] = color_averages[chosen_quadrant][1][flat_id]
+		new_data[flat_id_result + 2] = color_averages[chosen_quadrant][2][flat_id]
+		new_data[flat_id_result + 3] = 255        // alpha channel constant
+		
 	}
 
 	return & image.RGBA{
@@ -197,26 +200,25 @@ func sliceSubtractSquared(arr []float32, other []float32){
 	}
 }
 
-func chooseQuadrants(standard_deviations [4][][]float32) [][]uint8{
-	y_size := len(standard_deviations[0])
-	x_size := len(standard_deviations[0][0])
-	quadrants_chosen := common.Make2D[uint8](y_size, x_size)
-	for y:= 0; y < y_size ; y++ {
-		for x:= 0; x < x_size ; x++ {
-			var i uint8
-			var min_id uint8 = 0
-			var min_deviation float32 = standard_deviations[0][y][x]
-			for i = 1; i< 4 ; i++{
-				if standard_deviations[i][y][x] < min_deviation {
-					min_deviation = standard_deviations[i][y][x]
-					min_id = i
-				}
+func chooseQuadrants(standard_deviations [4][]float32) []uint8{
+	item_count := len(standard_deviations[0])
+	quadrants_chosen := make([]uint8, item_count)
+	for i:= 0; i<item_count; i++{
+		var quadrant_id uint8
+		var min_id uint8 = 0
+		var min_deviation float32 = standard_deviations[0][i]
+		for quadrant_id = 1; quadrant_id< 4 ; quadrant_id++{
+			if standard_deviations[quadrant_id][i] < min_deviation {
+				min_deviation = standard_deviations[quadrant_id][i]
+				min_id = quadrant_id
 			}
-			quadrants_chosen[y][x] = min_id
 		}
+		quadrants_chosen[i] = min_id
 	}
+
 	return quadrants_chosen
 }
+
 
 func sliceFloat32ToUint8(floats []float32, uints []uint8){
 	for id := range floats {
@@ -230,36 +232,108 @@ func sliceUint8ToFloat32(uints []uint8, floats []float32){
 	}
 }
 
+
 /*
 SepFilter2D applies a separable linear filter to the single channel image. 
-
+Function is insipered by similarly named function in OpenCV
 
 */
-func SepFilter2D(img [][]float32, kernels [2][]float32, kernel_anchors [2]int) [][]float32{
-	if len(img) < len(kernels[0]) || len(img[0]) < len(kernels[1]) {
-		panic("Kernel dimension larger than image dimension. Not implemented.")
+func SepFilter2D(img []float32, dest[]float32, temp_buffer[]float32,
+			 	shape [2]int,  kernels [2][]float32, kernel_anchors [2]int){
+	if len(kernels[1]) <= shape[1]{
+		filterHorizontal1D(img, temp_buffer, shape, kernels[1], kernel_anchors[1])
+	}else{
+		filterEdgeCaseHorizontal1D(img, temp_buffer, shape, kernels[1], kernel_anchors[1])
 	}
-	intermediate := filterHorizontal1D(img, kernels[1], kernel_anchors[1])
-	result := filterVertical1D(intermediate, kernels[0], kernel_anchors[0])
 
+	if len(kernels[0]) <=  shape[0]{
+		filterVertical1D(temp_buffer, dest, shape, kernels[0], kernel_anchors[0])
+	}else{
+		filterEdgeCaseVertical1D(temp_buffer, dest, shape, kernels[0], kernel_anchors[0])
+	}
+
+}
+/* this is done if kernel size is larger than dimension*/
+
+func filterEdgeCaseVertical1D(img []float32, result[]float32, shape [2]int, kernel []float32, kernel_anchor int){
+	var y_shape int = shape[0]
+	var x_shape int = shape[1]
+
+	// offsets say which row/ columns from the start/end where not all kernel values are in range of image
+	kernel_offset_L := kernel_anchor
+	kernel_offset_R := len(kernel) - 1 - kernel_anchor
+	KernelRange := [2]int{-kernel_offset_L, kernel_offset_R + 1}
+
+	for y:=0; y < y_shape; y++{
+		for x:=0; x < x_shape; x++{
+			var sum float32 = 0.0
+			for y_offset := KernelRange[0]; y_offset < KernelRange[1] ; y_offset++ {
+				kernel_weight := kernel[kernel_anchor + y_offset]
+				img_y := y + y_offset
+				img_y_reflected := reflectIndex101(img_y, y_shape-1)
+				img_flat_id := img_y_reflected * x_shape + x
+				sum += img[img_flat_id] * kernel_weight
+			}
+			result[y * x_shape + x] = sum
+		}
+	}
+
+}
+
+func filterEdgeCaseHorizontal1D(img []float32, result[]float32, shape [2]int, kernel []float32, kernel_anchor int){
+	var y_shape int = shape[0]
+	var x_shape int = shape[1]
+
+	// offsets say which row/ columns from the start/end where not all kernel values are in range of image
+	kernel_offset_L := kernel_anchor
+	kernel_offset_R := len(kernel) - 1 - kernel_anchor
+	KernelRange := [2]int{-kernel_offset_L, kernel_offset_R + 1}
+
+	for y:=0; y < y_shape; y++{
+		for x:=0; x < x_shape; x++{
+			var sum float32 = 0.0
+			for x_offset := KernelRange[0]; x_offset < KernelRange[1] ; x_offset++ {
+				kernel_weight := kernel[kernel_anchor + x_offset]
+				img_x := x + x_offset
+				img_x_reflected := reflectIndex101(img_x, x_shape-1)
+				img_flat_id := y * x_shape + img_x_reflected
+				sum += img[img_flat_id] * kernel_weight
+			}
+			result[y * x_shape + x] = sum
+		}
+	}
+}
+
+/* used by edge case variants of filter, can reflect off walls multiple times */
+func reflectIndex101(index_check, max_index int) int {
+	remainder := index_check % max(max_index * 2, 1)
+	if remainder < 0 {
+		remainder = - remainder
+	}
+	var result int = 0
+	if(remainder > max_index){
+		result = - remainder + max_index * 2
+	}else{
+		result =  remainder
+	}
 	return result
 }
 
-
-func filterVertical1D(img [][]float32, kernel []float32, kernel_anchor int) [][]float32{
-	result := common.Make2D[float32](len(img), len(img[0]))
+func filterVertical1D(img []float32, result[]float32, shape [2]int, kernel []float32, kernel_anchor int){
+	var y_shape int = shape[0]
+	var x_shape int = shape[1]
 
 	// offsets say which row/ columns from the start/end where not all kernel values are in range of image
 	kernel_offset_L := kernel_anchor
 	kernel_offset_R := len(kernel) - 1 - kernel_anchor
 
 	KernelRange := [2]int{-kernel_offset_L, kernel_offset_R + 1}
-	Xrange := [2]int{0, len(img[0])}
+	Xrange := [2]int{0, x_shape}
 	// ranges for Y in each of three loops
 	Yranges := [3][2]int{
 		{0, kernel_offset_L},
-		{kernel_offset_L, len(img) - kernel_offset_R},
-		{len(img) - kernel_offset_R, len(img)},
+		{kernel_offset_L, y_shape - kernel_offset_R},
+		{y_shape - kernel_offset_R, y_shape},
 	}
 
 	// first loop - left hands side kernel positions are out of bounds
@@ -270,9 +344,10 @@ func filterVertical1D(img [][]float32, kernel []float32, kernel_anchor int) [][]
 				kernel_weight := kernel[kernel_anchor + y_offset]
 				img_y := y + y_offset
 				img_y_reflected := common.Ternary(img_y < 0, -img_y, img_y)
-				sum += img[img_y_reflected][x] * kernel_weight
+				img_flat_id := img_y_reflected * x_shape + x
+				sum += img[img_flat_id] * kernel_weight
 			}
-			result[y][x] = sum
+			result[y * x_shape + x] = sum
 		}
 	}
 
@@ -283,9 +358,10 @@ func filterVertical1D(img [][]float32, kernel []float32, kernel_anchor int) [][]
 			var sum float32 = 0.0
 			for y_offset := KernelRange[0]; y_offset < KernelRange[1] ; y_offset++ {
 				kernel_weight := kernel[kernel_anchor + y_offset]
-				sum += img[y + y_offset][x] * kernel_weight
+				img_flat_id := (y + y_offset) * x_shape + x
+				sum += img[img_flat_id] * kernel_weight
 			}
-			result[y][x] = sum
+			result[y * x_shape + x] = sum
 		}
 	}
 
@@ -302,18 +378,17 @@ func filterVertical1D(img [][]float32, kernel []float32, kernel_anchor int) [][]
 					(Yranges[2][1] - 1) - img_y + (Yranges[2][1] - 1),
 					img_y,
 				)
-				sum += img[img_y_reflected][x] * kernel_weight
+				img_flat_id := img_y_reflected * x_shape + x
+				sum += img[img_flat_id] * kernel_weight
 			}
-			result[y][x] = sum
+			result[y * x_shape + x] = sum
 		}
 	}
-
-
-	return result
 }
 
-func filterHorizontal1D(img [][]float32, kernel []float32, kernel_anchor int) [][]float32{
-	result := common.Make2D[float32](len(img), len(img[0]))
+func filterHorizontal1D(img []float32, result[]float32, shape [2]int, kernel []float32, kernel_anchor int){
+	var y_shape int = shape[0]
+	var x_shape int = shape[1]
 
 	// offsets say which row/ columns from the start/end where not all kernel values are in range of image
 	kernel_offset_L := kernel_anchor
@@ -321,12 +396,12 @@ func filterHorizontal1D(img [][]float32, kernel []float32, kernel_anchor int) []
 
 
 	KernelRange := [2]int{-kernel_offset_L, kernel_offset_R + 1}
-	Yrange := [2]int{0, len(img)}
+	Yrange := [2]int{0, y_shape}
 	// ranges for X in each of three loops
 	Xranges := [3][2]int{
 		{0, kernel_offset_L},
-		{kernel_offset_L, len(img[0]) - kernel_offset_R},
-		{len(img[0]) - kernel_offset_R, len(img[0])},
+		{kernel_offset_L, x_shape - kernel_offset_R},
+		{x_shape - kernel_offset_R, x_shape},
 	}
 
 	// first loop - left hands side kernel positions are out of bounds
@@ -338,9 +413,10 @@ func filterHorizontal1D(img [][]float32, kernel []float32, kernel_anchor int) []
 				// reflect the index from the left edge by taking absolute value of index 
 				img_x := x + x_offset
 				img_x_reflected := common.Ternary(img_x < 0, -img_x, img_x)
-				sum += img[y][img_x_reflected] * kernel_weight
+				img_flat_id := y * x_shape + img_x_reflected
+				sum += img[img_flat_id] * kernel_weight
 			}
-			result[y][x] = sum
+			result[y * x_shape + x] = sum
 		}
 	}
 
@@ -351,9 +427,10 @@ func filterHorizontal1D(img [][]float32, kernel []float32, kernel_anchor int) []
 			var sum float32 = 0.0
 			for x_offset := KernelRange[0]; x_offset < KernelRange[1] ; x_offset++ {
 				kernel_weight := kernel[kernel_anchor + x_offset]
-				sum += img[y][x + x_offset] * kernel_weight
+				img_flat_id := y * x_shape + x + x_offset
+				sum += img[img_flat_id] * kernel_weight
 			}
-			result[y][x] = sum
+			result[y * x_shape + x] = sum
 		}
 	}
 
@@ -371,10 +448,11 @@ func filterHorizontal1D(img [][]float32, kernel []float32, kernel_anchor int) []
 					(Xranges[2][1] - 1) - img_x + (Xranges[2][1] - 1),
 					img_x,
 				)
-				sum += img[y][img_x_reflected] * kernel_weight
+				img_flat_id := y * x_shape + img_x_reflected
+				sum += img[img_flat_id] * kernel_weight
 			}
-			result[y][x] = sum
+			result[y * x_shape + x] = sum
 		}
 	}
-	return result
 }
+

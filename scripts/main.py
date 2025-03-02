@@ -185,7 +185,7 @@ def apply_gaussian_kuwahara_filter(img_arr, radius=2, sigma=1.5):
 
 
 
-with PIL.Image.open(f'../images/test/one_by_one.png') as img:
+with PIL.Image.open(f'../images/test/testing_small_kernel.png') as img:
     img.load()
 img = img.convert()
 img_arr = img_to_numpy_array(img)
@@ -193,7 +193,7 @@ img_arr = img_to_numpy_array(img)
 # TESTING_SCAN_THROUGH_DIRECTORY("Images/test_set_pixelarts_clean")
 import time
 t0 = time.time()
-kuwaharad_arr = apply_gaussian_kuwahara_filter(img_arr)
+kuwaharad_arr = apply_gaussian_kuwahara_filter(img_arr, radius=5)
 t1 = time.time()
 
 total_n = t1-t0
