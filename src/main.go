@@ -14,7 +14,6 @@ import(
 	"pixel_restoration/images"
 	"pixel_restoration/images/kuwahara"
 	"pixel_restoration/contrast"
-	_"pixel_restoration/common"
 )
 
 const DEBUG = true
@@ -52,7 +51,7 @@ func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
 
 func main() {
 
-	img, err := images.ImageLoadFromFile("../images/test_set_pixelarts_clean/CLEAN_4_gigantic_difficulty_faces.png")
+	img, err := images.ImageLoadFromFile("../images/test_set_pixelarts_clean/CLEAN_5.5_gd_mermaid2.png")
 	if(err != nil){
 		fmt.Println(err)
 		panic(1)
@@ -62,23 +61,25 @@ func main() {
 	// automaticGridDetectionMain(img)
 	// fmt.Println(images.ImageGetGreyscaledChannel(img))
 
-	start := time.Now()
+
 	kuwaharad:= kuwahara.KuwaharaGaussian(img, 2, 1.5)
-    elapsed := time.Since(start)
-    fmt.Println(elapsed)
 
 	err = images.ImageSaveToFile("../images/test/RESULT.png", kuwaharad)
 
+	start := time.Now()
+    img = images.ImageUpscaledByFactor(img, 3)
+    elapsed := time.Since(start)
+    fmt.Println(elapsed)
 
-	// temp_image := common.Make2D[float32](100,100)
-	// for y := range temp_image{
-	// 	for x := range temp_image[0]{
-	// 		temp_image[y][x] = float32(y) * 3.1 + 6.8 * float32(x)
-	// 	}
-	// }
+  	var row_ids []int = []int{0,5,19,11}
+  	var color [4]uint8 = [4]uint8{255,0,0,255}
+  	var color2 [4]uint8 = [4]uint8{0,255,0,255}
 
-	// result := images.SepFilter2D(temp_image,[2][]float32{{1,2,3,4},{1,2,5,6}},[2]int{0,2})
-	// _ = result
+  	img_smaller := img.SubImage(image.Rect(100, 125, 366, 500)).(*image.RGBA)
+  	images.DrawGridlineRowsOnImage(img_smaller, row_ids, color)
+  	images.DrawGridlineColsOnImage(img_smaller, row_ids, color2)
+	err = images.ImageSaveToFile("../images/test/RESULT.png", img)
+
 
 }
 

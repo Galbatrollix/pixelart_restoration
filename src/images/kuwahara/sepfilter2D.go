@@ -1,9 +1,5 @@
 package kuwahara
 
-
-import "pixel_restoration/common"
-
-
 /*
 	sepFilter2D applies a separable linear filter to the single channel image. 
 	Function is insipered by similarly named function in OpenCV
@@ -117,7 +113,24 @@ func reflectIndex101Full(index_check, max_index int) int {
 	return result
 }
 
+/* used in loops that have kernel positions reaching indexes lower than 0 */
+func reflectIndex101Left(index_check int) int{
+	if index_check < 0 {
+		return - index_check
+	}else{
+		return index_check
+	}
+}
 
+/*used in loops that have kernel positions reaching index higher than max*/
+
+func reflectIndex101Right(index_check, max_index int) int{
+	if index_check > max_index {
+		return max_index - index_check + max_index
+	}else{
+		return index_check
+	}
+}
 /* 
 	this is done if Y kernel size is smaller or equal to Y dimension,
 	omits checking for reflection where not necessary 
@@ -146,7 +159,7 @@ func filterVertical1D(img []float32, result[]float32, shape [2]int, kernel []flo
 			for y_offset := KernelRange[0]; y_offset < KernelRange[1] ; y_offset++ {
 				kernel_weight := kernel[kernel_anchor + y_offset]
 				img_y := y + y_offset
-				img_y_reflected := common.Ternary(img_y < 0, -img_y, img_y)
+				img_y_reflected := reflectIndex101Left(img_y)
 				img_flat_id := img_y_reflected * x_shape + x
 				sum += img[img_flat_id] * kernel_weight
 			}
@@ -176,11 +189,7 @@ func filterVertical1D(img []float32, result[]float32, shape [2]int, kernel []flo
 			for y_offset := KernelRange[0]; y_offset < KernelRange[1] ; y_offset++ {
 				kernel_weight := kernel[kernel_anchor + y_offset]
 				img_y := y + y_offset
-				img_y_reflected := common.Ternary(
-					img_y > Yranges[2][1] - 1,
-					(Yranges[2][1] - 1) - img_y + (Yranges[2][1] - 1),
-					img_y,
-				)
+				img_y_reflected := reflectIndex101Right(img_y, Yranges[2][1] - 1)
 				img_flat_id := img_y_reflected * x_shape + x
 				sum += img[img_flat_id] * kernel_weight
 			}
@@ -220,7 +229,7 @@ func filterHorizontal1D(img []float32, result[]float32, shape [2]int, kernel []f
 				kernel_weight := kernel[kernel_anchor + x_offset]
 				// reflect the index from the left edge by taking absolute value of index 
 				img_x := x + x_offset
-				img_x_reflected := common.Ternary(img_x < 0, -img_x, img_x)
+				img_x_reflected := reflectIndex101Left(img_x)
 				img_flat_id := y * x_shape + img_x_reflected
 				sum += img[img_flat_id] * kernel_weight
 			}
@@ -251,11 +260,7 @@ func filterHorizontal1D(img []float32, result[]float32, shape [2]int, kernel []f
 				kernel_weight := kernel[kernel_anchor + x_offset]
 				// reflect the index from the right edge
 				img_x := x + x_offset
-				img_x_reflected := common.Ternary(
-					img_x > Xranges[2][1] - 1,
-					(Xranges[2][1] - 1) - img_x + (Xranges[2][1] - 1),
-					img_x,
-				)
+				img_x_reflected := reflectIndex101Right(img_x, Xranges[2][1] - 1)
 				img_flat_id := y * x_shape + img_x_reflected
 				sum += img[img_flat_id] * kernel_weight
 			}

@@ -22,7 +22,7 @@ func ImageLoadFromFile(filepath string) (*image.RGBA, error){
 		return nil, err
 	}
 
-	return toRGBA(imageData) , nil
+	return getRGBAFromImage(imageData) , nil
 }
 
 func ImageSaveToFile(filepath string, img *image.RGBA) error {
@@ -41,7 +41,7 @@ func ImageSaveToFile(filepath string, img *image.RGBA) error {
 }
 
 
-func toRGBA(src image.Image) (*image.RGBA){
+func getRGBAFromImage(src image.Image) (*image.RGBA){
 	bounds := src.Bounds()
 	converted := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
 	draw.Draw(converted, bounds, src, bounds.Min, draw.Src)

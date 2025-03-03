@@ -1,16 +1,6 @@
 package common
 
 
-// MemCopy: this function will copy all elements from source slice to destination slice. 
-// Will panic if source slice is larger than destination
-// UB if memory of destination and source overlaps
-func MemCopy[T any](to []T, from []T){
-    for i := range from {
-        to[i] = from[i]
-    }
-
-}
-
 // MemSet: this function will set all elements of target slice to given value.
 func MemSet[T any](slice []T , val T){
     for i := range slice {

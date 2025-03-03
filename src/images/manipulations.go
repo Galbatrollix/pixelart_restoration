@@ -4,10 +4,6 @@ import (
 	"image"
 )
 
-import (
-	"pixel_restoration/common"
-)
-
 /* 
 	ImageGetSplitChannels seturns array of 3 slices of uint8, each slice has different memory block
 	each uint8 slice corresponds to flattened R, G, B channel of the image, alpha is discarded
@@ -74,7 +70,7 @@ func ImageGetNormalized(img *image.RGBA) *image.RGBA {
 	for y := 0 ; y < img.Rect.Dy() ; y++ {
 		flat_id_origin := img.PixOffset(img.Rect.Min.X, y + img.Rect.Min.Y)
 		flat_id_target := y * new_stride 
-		common.MemCopy(
+		copy(
 			new_data[flat_id_target: flat_id_target + new_stride],
 			img.Pix[flat_id_origin: flat_id_origin + new_stride],
 		)
@@ -102,7 +98,7 @@ func ImageGetTransposed(img *image.RGBA) *image.RGBA {
 		for x:= 0; x < img.Rect.Dx(); x++ {
 			flat_id_origin := img.PixOffset(x + img.Rect.Min.X, y + img.Rect.Min.Y)
 			flat_id_target := (x * img.Rect.Dy() + y) * 4
-			common.MemCopy(
+			copy(
 				new_data[flat_id_target: flat_id_target + 4],
 				img.Pix[flat_id_origin: flat_id_origin + 4],
 			)
