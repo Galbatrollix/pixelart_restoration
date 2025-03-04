@@ -1,10 +1,17 @@
+/*
+	Alterations file contains functions that alter the image files in the following ways:
+	- upscale (also upscale with gridlines)
+	- draw gridlines
+	- add noise to image <not yet added>
+	- add watermakrs to image <not yet added>
+*/
+
 package images
 
 import (
 	"image"
 	"fmt"
 )
-
 
 
 /*
@@ -70,36 +77,36 @@ func ImageUpscaledByFactor(img *image.RGBA, factor int) *image.RGBA{
 Noticably (10x) slower but more sane version of ImageUpscaledByFactor
 
 */
-func ImageUpscaledByFactor2(img *image.RGBA, factor int) *image.RGBA{
-	if(factor < 0){
-		panic("Upscale by negative factor attempted")
-	}
-	if(factor > 100){
-		panic("Upscale by factor higher than 100 attempted.")
-	}
-	// simplifies iteration logic if image rect starts at 0,0 and stride is equal to 4 * width
-	img = ImageGetNormalized(img)
+// func ImageUpscaledByFactor2(img *image.RGBA, factor int) *image.RGBA{
+// 	if(factor < 0){
+// 		panic("Upscale by negative factor attempted")
+// 	}
+// 	if(factor > 100){
+// 		panic("Upscale by factor higher than 100 attempted.")
+// 	}
+// 	// simplifies iteration logic if image rect starts at 0,0 and stride is equal to 4 * width
+// 	img = ImageGetNormalized(img)
 
-	height, width := img.Rect.Dy(), img.Rect.Dx()
-	upscaled := image.NewRGBA(image.Rect(0, 0, width * factor, height * factor))
+// 	height, width := img.Rect.Dy(), img.Rect.Dx()
+// 	upscaled := image.NewRGBA(image.Rect(0, 0, width * factor, height * factor))
 
-	for new_y := 0; new_y < height * factor; new_y++{
-		for new_x := 0; new_x < width * factor; new_x++{
-			og_x := new_x / factor
-			og_y := new_y / factor
+// 	for new_y := 0; new_y < height * factor; new_y++{
+// 		for new_x := 0; new_x < width * factor; new_x++{
+// 			og_x := new_x / factor
+// 			og_y := new_y / factor
 
-			og_flat := (og_y * width + og_x ) * 4
-			new_flat := (new_y * upscaled.Stride)+ new_x  * 4
+// 			og_flat := (og_y * width + og_x ) * 4
+// 			new_flat := (new_y * upscaled.Stride)+ new_x  * 4
 
-			for i:=0; i<4 ;i++{
-				upscaled.Pix[new_flat + i] = img.Pix[og_flat + i]
-			}
-		}
-	}
+// 			for i:=0; i<4 ;i++{
+// 				upscaled.Pix[new_flat + i] = img.Pix[og_flat + i]
+// 			}
+// 		}
+// 	}
 
-	return upscaled
+// 	return upscaled
 
-}
+// }
 
 
 	
@@ -135,9 +142,9 @@ func DrawGridlineRowsOnImage(img *image.RGBA, y_indexes []int, color [4]uint8) {
 
 /*
 
-	DrawGridlineColsOnImage fills selected rows of input image with provided RGBA color.
-	Selected rows are chosen based on y_indexes slice. 
-	If y_indexes holds invalid row index, function will panic.
+	DrawGridlineColsOnImage fills selected columns of input image with provided RGBA color.
+	Selected columns are chosen based on x_indexes slice. 
+	If x_indexes holds invalid row index, function will panic.
 
 */
 func DrawGridlineColsOnImage(img *image.RGBA, x_indexes []int, color [4]uint8){
@@ -153,7 +160,6 @@ func DrawGridlineColsOnImage(img *image.RGBA, x_indexes []int, color [4]uint8){
 		}
 	}
 
-
 	// for each provided column, fill with given color
 	for _, x := range x_indexes{
 		flat_id_base := img.PixOffset(x + img.Rect.Min.X, 0 + img.Rect.Min.Y)
@@ -163,3 +169,6 @@ func DrawGridlineColsOnImage(img *image.RGBA, x_indexes []int, color [4]uint8){
 		}
 	}
 }
+
+
+

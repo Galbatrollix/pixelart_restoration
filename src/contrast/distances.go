@@ -16,23 +16,28 @@ CalculatePixelEdgeDistances calculates euclidean distance between each adjacent 
 Vertical parameter determines for which axis the distances are computed.
 
 If vertical == false, 
-	result is a slice containing Ysize slices of distances between Xsize-1 pixel pairs in a row
+	result is an image containing Ysize rows of distances between Xsize-1 pixel pairs in a row Y
 If vertical == true, 
-	result is a slice containing Xsize slices of distances between Ysize-1 pixel pairs in a column
+	result is an image containing Xsize rows of distances between Ysize-1 pixel pairs in a column X
 
-All inner slices in the returned structure are guaranteed to be allocated in a single memory block,
- which can be reinterpreted as flat slice by reslicing first element to size of total number of elements
+First value of each row is 0 padding used to preserve image shape
+
 */
-func CalculatePixelEdgeDistances(img *image.RGBA, vertical bool) [][]float32{
+func CalculatePixelEdgeDistances(img *image.RGBA, vertical bool) *image.Gray{
 	var is_vertical int = common.Ternary(vertical, 1, 0)
 	sizes := [2]int{
 		img.Rect.Dx(),
 		img.Rect.Dy(),
 	}
-	result := common.Make2D[float32](sizes[1 - is_vertical], sizes[is_vertical] - 1)
 
-	for outer := 0; outer < sizes[1 - is_vertical] ; outer++ {
-		for inner := 0; inner < sizes[is_vertical] - 1 ; inner++ {
+	height, width := sizes[1 - is_vertical], sizes[is_vertical]
+	new_rect := image.Rect(0,0,width, height)
+	new_stride := width
+	new_data := make([]uint8, width * height)
+
+
+	for outer := 0; outer < height ; outer++ {
+		for inner := 0; inner < width - 1 ; inner++ {
 			curr := [2]int {inner, outer}
 			next := [2]int {inner + 1, outer}
 
@@ -48,13 +53,24 @@ func CalculatePixelEdgeDistances(img *image.RGBA, vertical bool) [][]float32{
 			var r_delta float64 = float64(img.Pix[curr_flat_id + 0]) - float64(img.Pix[next_flat_id + 0])
 			var g_delta float64 = float64(img.Pix[curr_flat_id + 1]) - float64(img.Pix[next_flat_id + 1])
 			var b_delta float64 = float64(img.Pix[curr_flat_id + 2]) - float64(img.Pix[next_flat_id + 2])
-			dist := float32(math.Sqrt(r_delta * r_delta + g_delta *g_delta + b_delta * b_delta))
-			result[outer][inner] = dist
+			dist := math.Sqrt(r_delta * r_delta + g_delta *g_delta + b_delta * b_delta)
+
+			new_data[outer * new_stride + inner + 1] = distMapToUint8(dist)
 		}
 
 	}
 
-	return result
+	return & image.Gray{
+		Pix : new_data,
+		Stride: new_stride,
+		Rect: new_rect,
+	}
 
 
+}
+
+
+func distMapToUint8(dist float64) uint8 {
+	const max_possible_color_diff = 441.674
+	return uint8(255.0 * dist / max_possible_color_diff + 0.5)
 }

@@ -2,9 +2,10 @@ package contrast
 
 import (
 	"slices"
+	"image"
 )
 import (
-	"pixel_restoration/params"	
+	"pixel_restoration/images"
 )
 
 
@@ -12,16 +13,33 @@ import (
 	CalculateMinPeakHeight approximates minimum peak height for optimal gridline detection
     by analyzing all found distances.
 
-    Around 75 is generally good peak height value.
-    This function will return 100 if max possible distance was detected
+    Around 50 is generally good peak height value.
+    This function will return 58 if max possible distance was detected
     Upper bound on returned value can be configured in params package
 */
 
-func CalculateMinPeakHeight(all_distances []float32) float32{
-	const max_possible_color_diff float32 = 443.0
-	const base_height float32 = 100.0
+func CalculateMinPeakHeight(all_distances []uint8, min_peak_height_limit float64) uint8{
+	const max_possible_dist float64 = 255.0
+	const base_height float64 = 58.0
 
-	var dist_max float32 = slices.Max(all_distances)
-	min_peak_height := base_height * dist_max / max_possible_color_diff
-	return min(params.MinPeakHeightLimit, min_peak_height)
+	var dist_max uint8 = slices.Max(all_distances)
+	min_peak_height := base_height * float64(dist_max) / max_possible_dist
+	return uint8(min(min_peak_height_limit, min_peak_height) + 0.5)
+}
+
+
+
+func ThresholdWithMinHeight(distances *image.Gray, min_peak_height uint8) *image.Gray{
+	distances_new := images.GrayscaleGetNormalized(distances)
+
+	item_count := distances_new.Rect.Dx() * distances_new.Rect.Dy()
+
+	for i:= 0; i<item_count; i++{
+		if distances_new.Pix[i] >= min_peak_height {
+			distances_new.Pix[i] = 255
+		}else{
+			distances_new.Pix[i] = 0
+		}
+	}
+	return distances_new
 }

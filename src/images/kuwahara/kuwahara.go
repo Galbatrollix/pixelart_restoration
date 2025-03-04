@@ -4,10 +4,6 @@ import (
 	"image"
 )
 
-import (
-	"pixel_restoration/images"
-)
-
 
 func KuwaharaGaussian(img *image.RGBA, radius int, sigma float32) *image.RGBA{
 	if radius < 1 {
@@ -48,7 +44,7 @@ func KuwaharaGaussian(img *image.RGBA, radius int, sigma float32) *image.RGBA{
 	} 
 
 	// get standard deviations 
-	greyscale := images.ImageGetGreyscaledChannel(img)
+	greyscale := getGreyscaledChannel(img)
 	var standard_deviations [4][]float32 = calculateStandardDeviations(
 		greyscale, img_shape, total_count,
 		kernel_quadrants, kernel_anchors,
@@ -56,7 +52,7 @@ func KuwaharaGaussian(img *image.RGBA, radius int, sigma float32) *image.RGBA{
 
 
 	// calculating color averages
-	channels := images.ImageGetSplitChannels(img)
+	channels := getSplitChannels(img)
 	var color_averages [4][3][]uint8 = getColorAverages(
 		channels, img_shape, total_count,
 		kernel_quadrants, kernel_anchors,

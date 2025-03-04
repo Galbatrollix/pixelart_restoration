@@ -1,0 +1,4 @@
+*.exe
+*.o
+images/test
+images/debug

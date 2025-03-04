@@ -11,7 +11,7 @@ func CalculateAverageColor(img *image.RGBA) [3]uint8 {
 	channels := ImageGetSplitChannels(img)
 
 	for i := 0; i<3; i++ {
-		result[i] = meanOfSlice(channels[i])
+		result[i] = meanOfSlice(channels[i].Pix)
 	}
 
 	return result
@@ -22,7 +22,7 @@ func CalculateMedianColor(img *image.RGBA) [3]uint8{
 	channels := ImageGetSplitChannels(img)
 
 	for i := 0; i<3; i++ {
-		result[i] = medianOfSlice(channels[i])
+		result[i] = medianOfSlice(channels[i].Pix)
 	}
 
 	return result

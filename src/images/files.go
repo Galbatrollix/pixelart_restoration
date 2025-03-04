@@ -9,7 +9,7 @@ import (
 )
 
 
-func ImageLoadFromFile(filepath string) (*image.RGBA, error){
+func RGBALoadFromFile(filepath string) (*image.RGBA, error){
 	// Read image from file that already exists
 	infile, err := os.Open(filepath)
 	if err != nil {
@@ -25,7 +25,7 @@ func ImageLoadFromFile(filepath string) (*image.RGBA, error){
 	return getRGBAFromImage(imageData) , nil
 }
 
-func ImageSaveToFile(filepath string, img *image.RGBA) error {
+func RGBASaveToFile(filepath string, img *image.RGBA) error {
 	outfile, err := os.Create(filepath)
  	if err != nil {
    		return err
@@ -38,6 +38,23 @@ func ImageSaveToFile(filepath string, img *image.RGBA) error {
 	}
 
 	return nil
+}
+
+
+func GraySaveToFile(filepath string, img *image.Gray) error {
+	outfile, err := os.Create(filepath)
+ 	if err != nil {
+   		return err
+    }
+    defer outfile.Close()
+
+	err = png.Encode(outfile, img)
+	if err != nil {
+   		return err
+	}
+
+	return nil
+
 }
 
 
