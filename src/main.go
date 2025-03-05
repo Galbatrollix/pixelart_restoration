@@ -15,7 +15,8 @@ import(
 	"pixel_restoration/images/kuwahara"
 	"pixel_restoration/contrast"
 	"pixel_restoration/visualizations"
-	"pixel_restoration/params"
+
+	//"pixel_restoration/types"
 )
 
 const DEBUG = true
@@ -30,18 +31,27 @@ func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
 	var edge_distances_rows *image.Gray = contrast.CalculatePixelEdgeDistances(img_preprocessed, false)
 	var edge_distances_cols *image.Gray = contrast.CalculatePixelEdgeDistances(img_preprocessed, true)
 
-	var min_peak_height_rows uint8 = contrast.CalculateMinPeakHeight(edge_distances_cols.Pix, params.MIN_PEAK_HEIGHT_LIMIT)
-	var min_peak_height_cols uint8 = contrast.CalculateMinPeakHeight(edge_distances_rows.Pix, params.MIN_PEAK_HEIGHT_LIMIT)
+	var min_peak_height_rows uint8 = contrast.CalculateMinPeakHeight(edge_distances_cols.Pix, contrast.GetBasePeakHeightParams())
+	var min_peak_height_cols uint8 = contrast.CalculateMinPeakHeight(edge_distances_rows.Pix, contrast.GetBasePeakHeightParams())
 
 	var edge_rows_binary *image.Gray = contrast.ThresholdWithMinHeight(edge_distances_rows, min_peak_height_rows)
 	var edge_cols_binary *image.Gray = contrast.ThresholdWithMinHeight(edge_distances_cols, min_peak_height_cols)
 
-	// TODO: remove secluded pixels and against the grain lines to increase robustness vs watermarks
-	var edge_rows_binary_cleaned *image.Gray = edge_rows_binary
-	var edge_cols_binary_cleaned *image.Gray = edge_cols_binary
+
+	var edge_rows_binary_cleaned *image.Gray
+	edge_rows_binary_cleaned, _ = contrast.CleanupEdgeArtifacts(edge_rows_binary)
+	var edge_cols_binary_cleaned *image.Gray
+	edge_cols_binary_cleaned, _ = contrast.CleanupEdgeArtifacts(edge_cols_binary)
 
 
-	
+	var rows_edge_counts []uint = contrast.EdgesToEdgeCounts(edge_rows_binary_cleaned)
+	var cols_edge_counts []uint = contrast.EdgesToEdgeCounts(edge_cols_binary_cleaned)
+	// var rows_interval_list types.IntervalList = ...
+	// var cols_interval_list types.IntervalList = ...
+
+
+
+
 
 	if DEBUG {
 		fmt.Println("Image size (width, height): ", input_img.Rect.Dx(), input_img.Rect.Dy())
@@ -66,6 +76,25 @@ func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
 		_ = images.GraySaveToFile(DEBUG_DIR_PATH + "/edges_binary_rows.png", edge_rows_binary)
 		_ = images.GraySaveToFile(DEBUG_DIR_PATH + "/edges_binary_cols.png", edge_cols_binary_trans)
 
+		edge_cols_binary_cleaned_trans := images.GrayscaleGetTransposed(edge_cols_binary_cleaned)
+		edges_binary_sidebyside_cleaned := visualizations.SideBySideGrayscale(
+			edge_rows_binary_cleaned,
+			edge_cols_binary_cleaned_trans,
+		)
+		_ = images.GraySaveToFile(DEBUG_DIR_PATH + "/edges_cleaned_sidebyside.png", edges_binary_sidebyside_cleaned)
+		_ = images.GraySaveToFile(DEBUG_DIR_PATH + "/edges_cleaned_rows.png", edge_rows_binary_cleaned)
+		_ = images.GraySaveToFile(DEBUG_DIR_PATH + "/edges_cleaned_cols.png", edge_cols_binary_cleaned_trans)
+
+
+		fmt.Println("Edge counts, rows:\n" ,rows_edge_counts)
+		for i, value := range rows_edge_counts {
+			fmt.Printf("%d: %d\n", i, value)
+		}
+
+		fmt.Println("Edge counts, columns:\n" ,cols_edge_counts)
+		for i, value := range cols_edge_counts {
+			fmt.Printf("%d: %d\n", i, value)
+		}
 
 	}
 
@@ -77,7 +106,7 @@ func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
 
 func main() {
 
-	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_bad_cases/CLEAN_TEXT_18.5_misaligned_text2.png")
+	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_clean/CLEAN_34.5_paladin.png")
 	if(err != nil){
 		fmt.Println(err)
 		panic(1)
