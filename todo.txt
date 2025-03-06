@@ -1,22 +1,24 @@
-1. Explore other ways to process imagaes instead of hand-rolled axis aligned edge detector 
-- https://medium.com/swlh/convolutional-neural-networks-22764af1c42a
-- https://pyimagesearch.com/2021/05/12/image-gradients-with-opencv-sobel-and-scharr/
-- https://aryamansharda.medium.com/how-image-edge-detection-works-b759baac01e2
+-- hough lines TEST
+-- make sure that consecutive edges on position are scored higher than many smaller edges of the same total length
 
--- one way is to hand roll a way to score contrast jumps around nearby contrast jumps (in other rows) higher
--- hough lines
+// PROGRAM STRUCTURE:
+1. Large function that calls "main pipeline" once and if the base case returns an edge case that requires adjustments, then a selected variant of "main pipeline" gets called. For example - first try yields mismatched vertical and horizontal lengths, then do something about it - perhaps downscale the image by smaller of the lengths if it isnt one
 
-2. make gaussian kernel - for kuwahara, blur and other potential implementations
-- https://www.askpython.com/python-modules/numpy/gaussian-kernel-matrix-numpy
+// EDGE CASE HANDLINGS: 
+1. if resulted grid size is 2/0 or 1/0 <interval/width>, 
+	re-run the program without custom filter and without kuwahara
+	example: any 1x1 and 2x2 image
+2. If large unknown sections are present (so large they cannot be guessed correctly)
+	re-run edge detection on the unknown section with more aggressive peak finder 
+	example: dithered
+3. Horizontal and vertical guesses were not aligned (differ more than 1.5x or so)
+	if smaller is larger than 1, then downscale image by smaller of the two values and run algorithm again
+	If smaller is 1, then IDK, shit happens // todo figure out
 
-3. Add resizing, noise adding, JPEG-ization and gridline adding tools/functions
 
 
-
-
-
-
-
+// TESTING:
+1.Noise adding, JPEG-ization, Watermark-ization, stretching-resizing tools
 
 
 

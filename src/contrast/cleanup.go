@@ -22,7 +22,7 @@ func CleanupEdgeArtifacts(edges_binary *image.Gray) (*image.Gray, int){
 			curr_id := y * width + x 
 			below_id := (y + 1) * width + x
 
-			if(result.Pix[above_id] == 0 && result.Pix[below_id] == 0 && result.Pix[curr_id] == 255){
+			if(result.Pix[above_id] == 0 && result.Pix[below_id] == 0 && result.Pix[curr_id] != 0){
 				result.Pix[curr_id] = 0
 				count_changed += 1
 			}
