@@ -26,10 +26,10 @@ import (
 */
 
 func ImageUpscaledByFactor(img *image.RGBA, factor int) *image.RGBA{
-	if(factor < 0){
+	if factor < 0 {
 		panic("Upscale by negative factor attempted")
 	}
-	if(factor > 100){
+	if factor > 100{
 		panic("Upscale by factor higher than 100 attempted.")
 	}
 	// simplifies iteration logic if image rect starts at 0,0 and stride is equal to 4 * width
@@ -171,4 +171,48 @@ func DrawGridlineColsOnImage(img *image.RGBA, x_indexes []int, color [4]uint8){
 }
 
 
+/*
+	ImageUpscaledWithGridlines returns new RGBA image where each pixel in original 
+	cooresponds to a pixel-width sized square. Between each square there is a
+	gridline_width-sized gridline drawn with provided color.
+
+*/
+func ImageUpscaledWithGridlines(img *image.RGBA, color [4]uint8, pixel_width int, gridline_width int) *image.RGBA {
+	if pixel_width < 0 {
+		panic("Pixel width negative")
+	}
+	if gridline_width < 0{
+		panic("Gridline width negative")
+	}
+	if gridline_width + pixel_width < 1 {
+		panic("Total upscale factor less than one")
+	}
+
+
+	height, width := img.Rect.Dy(), img.Rect.Dx()
+
+	scaling_factor := pixel_width + gridline_width
+	upscaled := ImageUpscaledByFactor(img, scaling_factor)
+
+	x_ids := gridlineIdsForUpscaled(width, scaling_factor, gridline_width)
+	y_ids := gridlineIdsForUpscaled(height, scaling_factor, gridline_width)
+
+
+	DrawGridlineRowsOnImage(upscaled, y_ids, color)
+	DrawGridlineColsOnImage(upscaled, x_ids, color)
+
+	return upscaled
+}
+
+func gridlineIdsForUpscaled(dim_size int, scaling_factor int, gridline_width int) []int {
+	ids := make([]int, 0, gridline_width * dim_size)
+	for n:=0 ;n<dim_size; n++{
+		base := (n + 1) * scaling_factor - 1
+		for i:=0; i<gridline_width; i++{
+			ids = append(ids, base - i)
+		}
+	}
+
+	return ids
+}
 

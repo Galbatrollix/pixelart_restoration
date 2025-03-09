@@ -8,6 +8,7 @@ import (
 	//"image/png"
 	//"os"
 	//"reflect"
+	"io/ioutil"
 )
 
 import(
@@ -15,26 +16,26 @@ import(
 	"pixel_restoration/images/kuwahara"
 	"pixel_restoration/contrast"
 	"pixel_restoration/visualizations"
-
-	//"pixel_restoration/types"
+	"pixel_restoration/types"
+	"pixel_restoration/gridlines"
 )
 
-const DEBUG = true
 const DEBUG_DIR_PATH string = "../images/DEBUG"
 
 //https://github.com/mpiannucci/peakdetect/blob/master/peakdetect.go
 //https://medium.com/@damithadayananda/image-processing-with-golang-8f20d2d243a2
-func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
+func automaticGridDetectionMain(input_img *image.RGBA, debug bool) (*image.RGBA, error) {
 	/*
 
 
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	*/
-	// TESTING
-	// input_img = images.ImageUpscaledByFactor(input_img, 2)
+	// input_img = images.ImageUpscaledWithGridlines(input_img, [4]uint8{0,0,0,255},2,1)
 
-	//consider adding contrast adjustment too but idk if its necessary
+
+	img_width, img_height := input_img.Rect.Dx(), input_img.Rect.Dy()
+
 	var img_preprocessed *image.RGBA = kuwahara.KuwaharaGaussian(input_img, 2, 1.5)
 	//img_preprocessed = input_img
 
@@ -69,14 +70,22 @@ func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
 	var most_frequent_rows []int = contrast.SelectMostFrequent(rows_edge_counts, contrast.GetBaseMostFrequentParams())
 	var most_frequent_cols []int = contrast.SelectMostFrequent(cols_edge_counts, contrast.GetBaseMostFrequentParams())
 
-	fmt.Println("Rows\n", most_frequent_rows)
-	fmt.Println("Cols\n", most_frequent_cols)
+	var rows_intervals types.IntervalList = types.IntervalListFromSortedEdgeIndexes(most_frequent_rows, img_width)
+	var cols_intervals types.IntervalList = types.IntervalListFromSortedEdgeIndexes(most_frequent_cols, img_height)
+
+	_,_ = gridlines.GuessGridlineParameters(rows_intervals)
+	_,_ = gridlines.GuessGridlineParameters(cols_intervals)
+
+	// fmt.Println("Rows\n", most_frequent_rows)
+	// fmt.Println("Cols\n", most_frequent_cols)
+
+	fmt.Println("Interval rows\n",rows_intervals.Intervals)
+	fmt.Println("Interval cols\n",cols_intervals.Intervals)
 
 
 
-
-	if DEBUG {
-		fmt.Println("Image size (width, height): ", input_img.Rect.Dx(), input_img.Rect.Dy())
+	if debug {
+		fmt.Println("Image size (width, height): ", img_width, img_height)
 		fmt.Println("Min peak height (rows, cols): ", min_peak_height_rows, min_peak_height_cols)
 
 
@@ -145,19 +154,39 @@ func automaticGridDetectionMain(input_img *image.RGBA) (*image.RGBA, error) {
 
 
 
+func testThroughDirectory(dirname string){
+	items, _ := ioutil.ReadDir(dirname)
+    for _, item := range items {
+	    filename := item.Name()
+        filename_full := dirname + "/" + filename
+        img, _ := images.RGBALoadFromFile(filename_full)
+
+        // img = images.ImageUpscaledWithGridlines(img,[4]uint8{0,0,0,255}, 2, 1)
+
+        fmt.Println(filename_full)
+        automaticGridDetectionMain(img, false)
+    }
+
+}
+
 func main() {
 
-	img, err := images.RGBALoadFromFile("../images/pixelarts_raw/palm.png")
+	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_grided/GRIDED_1_34_skull.png")
 	if(err != nil){
 		fmt.Println(err)
 		panic(1)
 	}
 
 	start := time.Now()
-	automaticGridDetectionMain(img)
+	const DEBUG = true
+	automaticGridDetectionMain(img, DEBUG)
     elapsed := time.Since(start)
     fmt.Println(elapsed)
+    
+    // test:=images.ImageUpscaledWithGridlines(img, [4]uint8{0,0,0,255}, 1,0 )
+    // images.RGBASaveToFile("../images/DEBUG/TEST.png", test)
 
+    // testThroughDirectory("../images/test_set_pixelarts_grided")
 
 }
 
