@@ -79,8 +79,8 @@ func automaticGridDetectionMain(input_img *image.RGBA, debug bool) (*image.RGBA,
 	// fmt.Println("Rows\n", most_frequent_rows)
 	// fmt.Println("Cols\n", most_frequent_cols)
 
-	fmt.Println("Interval rows\n",rows_intervals.Intervals)
-	fmt.Println("Interval cols\n",cols_intervals.Intervals)
+	// fmt.Println("Interval rows\n",rows_intervals.Intervals)
+	// fmt.Println("Interval cols\n",cols_intervals.Intervals)
 
 
 
@@ -150,6 +150,7 @@ func automaticGridDetectionMain(input_img *image.RGBA, debug bool) (*image.RGBA,
 
 
 	return nil, nil
+
 }
 
 
@@ -171,7 +172,7 @@ func testThroughDirectory(dirname string){
 
 func main() {
 
-	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_grided/GRIDED_1_34_skull.png")
+	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_grided/GRIDED_1.5_19.5_dragon2.png")
 	if(err != nil){
 		fmt.Println(err)
 		panic(1)
@@ -186,7 +187,7 @@ func main() {
     // test:=images.ImageUpscaledWithGridlines(img, [4]uint8{0,0,0,255}, 1,0 )
     // images.RGBASaveToFile("../images/DEBUG/TEST.png", test)
 
-    // testThroughDirectory("../images/test_set_pixelarts_grided")
+    testThroughDirectory("../images/pixelarts_raw2")
 
 }
 

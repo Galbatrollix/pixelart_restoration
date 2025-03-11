@@ -24,10 +24,6 @@ func GuessGridlineParameters(intervals types.IntervalList) (types.IntervalRangeE
 	}
 
 	interval_counts := getIntervalCounts(intervals)
-	largest_interval := len(interval_counts) - 1
-	_ = largest_interval
-	// fmt.Println("Interval counts: ",interval_counts)
-	// fmt.Println("Largest interval:",largest_interval)
 
 	interval_ranges := getIntervalRanges(interval_counts)
 	candidate1 := mostCommonIntervalRange(interval_ranges)
@@ -40,7 +36,6 @@ func GuessGridlineParameters(intervals types.IntervalList) (types.IntervalRangeE
 
 	var one_involved bool = candidate1.Bounds[0] == 1 || candidate2.Bounds[0] == 1
 
-	fmt.Println(one_involved)
 
 	var pixel_guess, grid_guess types.IntervalRangeEntry
 	if one_involved {
@@ -55,6 +50,8 @@ func GuessGridlineParameters(intervals types.IntervalList) (types.IntervalRangeE
 		)
 	}
 
+	fmt.Printf("Pixel Guess: %-v\nGrid guess: %-v\n", pixel_guess, grid_guess)
+
 	return pixel_guess, grid_guess
 }
 
@@ -62,10 +59,17 @@ func GuessGridlineParameters(intervals types.IntervalList) (types.IntervalRangeE
 func guessParametersWithOne(intervals types.IntervalList, inteval_counts []int,
 	 candidates [2]types.IntervalRangeEntry) (types.IntervalRangeEntry, types.IntervalRangeEntry) {
 
+	var second_empty bool = candidates[1].Count == 0
+	if second_empty {
+		goto ConsiderOnlyOneAndTwo
+	}
+	return types.GetZeroRangeEntry(), types.GetZeroRangeEntry()
 
 
 
-	return types.IntervalRangeEntry{[2]int{0,0},0,0}, types.IntervalRangeEntry{[2]int{0,0},0,0}
+	ConsiderOnlyOneAndTwo:
+	fmt.Println("CONSIDERING ONLY ONE AND TWO")
+	return types.GetZeroRangeEntry(), types.GetZeroRangeEntry()
 }
 
 func guessParametersNoOne(intervals types.IntervalList, inteval_counts []int, 
@@ -74,27 +78,62 @@ func guessParametersNoOne(intervals types.IntervalList, inteval_counts []int,
 	// if no intervals were left for calculatinng second candidate, then candidate 1 is assumed to be pixel size
 	var second_empty bool = candidates[1].Count == 0
 	if second_empty {
-		zero_range := types.IntervalRangeEntry{[2]int{0,0},0,0}
-		return candidates[0] , zero_range
+		return candidates[0] , types.GetZeroRangeEntry()
 	}
-	// TODO edge case for "roughly double", potentially change the filtrting out algoritm too, to accomodate that
-	// probably remove if midpoint of entry is within extended range, not entire entry
-	/*
+
+	var candidate_smaller, candidate_bigger types.IntervalRangeEntry
+	if candidates[0].Mean > candidates[1].Mean{
+		candidate_smaller, candidate_bigger = candidates[1], candidates[0]
+	}else{
+		candidate_smaller, candidate_bigger = candidates[0], candidates[1]
+	}
+
+	// Edge case for happens when one candidate is roughly 2x the other one.
+	// If that happens, assume its a gridless image and guess which guess is the correct one
+	// 1. Second candidate count must be at least 30% of the first candidate count
+	double_width_count_condition := float64(candidates[1].Count) / float64(candidates[0].Count) >= 0.3
+	// 2. Average of bigger of the candidates must be very close to double of the average of smaller candidate
+	double_width_size_condition := candidate_smaller.Mean * 2.0 + 1.0 >= candidate_bigger.Mean
+	if double_width_count_condition && double_width_size_condition {
+		
+		// If arrangement of larger objects suggests gridline mismatch, choose smaller item as pixel
+		var properly_aligned bool = isDoubleSizedIntervalAligned(intervals, candidate_bigger)
+		if ! properly_aligned {
+			return candidate_smaller, types.GetZeroRangeEntry()
+		}
 
 
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-	*/
-
+		// if alignment check succeeded, then guess based on runlength scores
+		bigger_score := singleCandidateRunlengthScore(intervals, candidate_bigger, 1)
+		smaller_score := singleCandidateRunlengthScore(intervals, candidate_smaller, 1)
+		if bigger_score > smaller_score {
+			return candidate_bigger, types.GetZeroRangeEntry()
+		}else if smaller_score > bigger_score {
+			return candidate_smaller, types.GetZeroRangeEntry()
+		}else{ // equal scores, choose 1st candidate
+			return candidates[0], types.GetZeroRangeEntry()
+		}
+	}
 
 	// Base case: calculate score for both cadidates and score for candidate 1 and 2 alternating, and choose the winner
-	score1 := singleCandidateRunlengthScore(intervals, candidates[0])
-	score2 := singleCandidateRunlengthScore(intervals, candidates[1])
+	score1 := singleCandidateRunlengthScore(intervals, candidates[0], 0)
+	score2 := singleCandidateRunlengthScore(intervals, candidates[1], 0)
 
 	score_alternating := alternatingCandidatesRunlengthScore(intervals, candidates)
-	fmt.Printf("Score1: %d\nScore2: %d\nScoreAlternating: %d\n",  score1,score2,score_alternating)
+	//fmt.Printf("Score1: %d\nScore2: %d\nScoreAlternating: %d\n",  score1,score2,score_alternating)
 
-	return types.IntervalRangeEntry{[2]int{0,0},0,0}, types.IntervalRangeEntry{[2]int{0,0},0,0}
+	highest_score := max(score1, score2, score_alternating)
+	//fmt.Println("Highest Score: ", highest_score)
+	switch highest_score {
+	case score_alternating:
+		return candidate_bigger, candidate_smaller
+	case score1:
+		return candidates[0], types.GetZeroRangeEntry()
+	default: // score2, currently will never execute but might if algorithm for score is modified
+		return candidates[1], types.GetZeroRangeEntry()
+
+	}
+
 }
 
 /*
@@ -221,7 +260,8 @@ func rangesWithCollisionsZeroed(entries []types.IntervalRangeEntry, sample types
 		var direct_overlap bool = entry_min <= sample_max && sample_min <= entry_max
 
 		// Removing if item would violate gridline to pixel ratio and is big enough for that
-		var violates_ratio bool = sample_big && (entry_min <= ratio_max && ratio_min <= entry_max)
+		entry_midpoint := (entry_max - entry_min ) / 2 + entry_min
+		var violates_ratio bool = sample_big && (ratio_min <= entry_midpoint && entry_midpoint <= ratio_max)
 
 		if direct_overlap || violates_ratio {
 			new_entries[i].Count = 0
@@ -255,11 +295,11 @@ func alternatingCandidatesRunlengthScore(intervals types.IntervalList, candidate
 /*
 	Calculates score for comparing selected interval range entry candidate with other candidates and arrangements
 */
-func singleCandidateRunlengthScore(intervals types.IntervalList, candidate types.IntervalRangeEntry) int {
+func singleCandidateRunlengthScore(intervals types.IntervalList, candidate types.IntervalRangeEntry, min_runglength int) int {
 	intervals_noedges := intervals.Intervals[1:intervals.TotalCount-1]
 
 	var runlengths []int = singleCandidateRunlengths(intervals_noedges, candidate.Bounds)
-	score := sumLargerThan(runlengths, 0)
+	score := sumLargerThan(runlengths, min_runglength)
 
 	return score
 
@@ -326,11 +366,7 @@ func alternatingCandidatesRunlengths(intervals_noedges []uint, cadidate_bounds [
 
 */ 
 func singleCandidateRunlengths(intervals_noedges []uint, cadidate_bounds [2]int) []int {
-	lookup := make([]bool, len(intervals_noedges))
-	for i, interval := range intervals_noedges {
-		var is_in_range bool = int(interval) >= cadidate_bounds[0] && int(interval) <= cadidate_bounds[1]
-		lookup[i] = is_in_range
-	}
+	lookup := candidateBelongsLookup(intervals_noedges, cadidate_bounds)
 
 	runlengths := consecutiveTrueRunlengths(lookup)
 
@@ -338,6 +374,20 @@ func singleCandidateRunlengths(intervals_noedges []uint, cadidate_bounds [2]int)
 	return runlengths
 }
 
+
+/*
+	Given a slice of intervals (without edges) and bounds interval candidate entry,
+	return a same-lengthed slice of bools 
+	position is set to true if interval under the same index belongs to candidate bounds, otherwise false
+*/
+func candidateBelongsLookup(intervals_noedges[]uint, cadidate_bounds [2]int) []bool {
+	lookup := make([]bool, len(intervals_noedges))
+	for i, interval := range intervals_noedges {
+		var is_in_range bool = int(interval) >= cadidate_bounds[0] && int(interval) <= cadidate_bounds[1]
+		lookup[i] = is_in_range
+	}
+	return lookup
+}
 
 /*
 	Returns lengths of all true-only substrings in bool slice
@@ -382,4 +432,58 @@ func sumLargerThan(slice []int, cutoff_value int) int{
 		}
 	}
 	return sum
+}
+
+func sliceSumU(slice []uint) uint {
+	sum := uint(0) 
+	for _, value := range slice {
+		sum += value
+	}
+	return sum
+}
+
+/*
+	Given slice of bools, return slice of ints that specifies all indexes in bool slice where there is true
+*/
+func indexesOfTrue(slice []bool) []int {
+	result :=  make([]int, 0, len(slice))
+	for i, isTrue := range slice {
+		if isTrue{
+			result = append(result, i)
+		}
+	}
+
+	return result
+}
+
+/*
+    Assuming image is gridless, check if provided interval candidate has alignment problems.
+
+    With input list of [8,4,8,8] and candidate 8, the return value will be False, because
+    first two 8s are not aligned with each other. (there is 4 units between them, but should be around 8)
+
+    With input list of 8,4,4,3,4,8 and candidate 8, the return value will be True, because
+    4,4,3,4 add up to 15, which is very close to 16 (2 * 8)
+ */
+func isDoubleSizedIntervalAligned(intervals types.IntervalList, candidate types.IntervalRangeEntry) bool{
+	var intervals_noedges []uint = intervals.Intervals[1:intervals.TotalCount - 1]
+	var belongment_array []bool = candidateBelongsLookup(intervals_noedges, candidate.Bounds)
+	var indexes_true []int = indexesOfTrue(belongment_array)
+
+	// any <gap/mean - floor(gap/mean)> between failure range bounds means that intervals are incorrectly aligned
+	failure_range:= [2]float64{0.2, 0.8}
+
+	for i:=1; i< len(indexes_true); i++{
+		left_id, right_id := indexes_true[i-1], indexes_true[i]
+		segment_inbetween := intervals_noedges[left_id+1:right_id]
+		total_segment_length := sliceSumU(segment_inbetween)
+
+		alignment_score_exact := (float64(total_segment_length) / candidate.Mean ) 
+		alignment_score_truncated := alignment_score_exact - math.Floor(alignment_score_exact)
+		if alignment_score_truncated >= failure_range[0] && alignment_score_truncated <= failure_range[1]{
+			return false
+		}
+
+	}
+	return true
 }

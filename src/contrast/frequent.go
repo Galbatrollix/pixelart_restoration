@@ -77,12 +77,12 @@ func edgeCountsSortedNonzero(edge_counts []uint) []uint {
 	return new_counts
 
 }
-// Put all nonzero items from edge counts to positive counts, memory for positive counts is allocated
-func populateNonzero(edge_counts, posivie_counts []uint){
+// Put all nonzero items from edge counts to positive counts, memory for positive counts is already allocated
+func populateNonzero(edge_counts, positive_counts []uint){
 	new_id := 0
 	for _, count := range edge_counts{
 		if count != 0 {
-			posivie_counts[new_id] = count
+			positive_counts[new_id] = count
 			new_id += 1
 		}
 	}
