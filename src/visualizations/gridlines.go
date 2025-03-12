@@ -34,7 +34,6 @@ func ImageWithDrawnGridlinesAdvanced(img *image.RGBA, indexes[2][]int, color [4]
 	images.DrawGridlineRowsOnImage(img_big, all_indexes[0], color_black)
 	images.DrawGridlineColsOnImage(img_big, all_indexes[1], color_black)
 
-
 	// Drawing selected edges in provided color
 	indexes = [2][]int{
 		indexesConvertToScaled(indexes[0], scaling_factor),

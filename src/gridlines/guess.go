@@ -10,7 +10,6 @@ import (
 )
 
 
-//todo: const big_bias = ...
 
 /*
 	Returns interval range for pixel and gridline if griddy image,
@@ -31,8 +30,8 @@ func GuessGridlineParameters(intervals types.IntervalList) (types.IntervalRangeE
 	interval_ranges_modified := rangesWithCollisionsZeroed(interval_ranges, candidate1)
 	candidate2 := mostCommonIntervalRange(interval_ranges_modified)
 	// todo hide once testing is done
-	//types.PrintRangeArrayZeroFiltered(interval_ranges)
-	fmt.Printf("%-v,%-v\n", candidate1, candidate2)
+	// types.PrintRangeArrayZeroFiltered(interval_ranges)
+	// fmt.Printf("%-v,%-v\n", candidate1, candidate2)
 
 	var one_involved bool = candidate1.Bounds[0] == 1 || candidate2.Bounds[0] == 1
 
@@ -56,20 +55,106 @@ func GuessGridlineParameters(intervals types.IntervalList) (types.IntervalRangeE
 }
 
 
-func guessParametersWithOne(intervals types.IntervalList, inteval_counts []int,
+func guessParametersWithOne(intervals types.IntervalList, interval_counts []int,
 	 candidates [2]types.IntervalRangeEntry) (types.IntervalRangeEntry, types.IntervalRangeEntry) {
 
-	var second_empty bool = candidates[1].Count == 0
+	// Preparing statistics and interval entry values
+	var candidate_smaller, candidate_bigger types.IntervalRangeEntry
+	if candidates[0].Mean > candidates[1].Mean{
+		candidate_smaller, candidate_bigger = candidates[1], candidates[0]
+	}else{
+		candidate_smaller, candidate_bigger = candidates[0], candidates[1]
+	}
+
+	entry_1_2 := types.IntervalRangeEntry{
+		Bounds: [2]int{1,2},
+		Count: candidate_smaller.Count,
+		Mean: candidate_smaller.Mean,
+	}
+	var count_ones_only int
+	var count_twos_only int
+	if len(interval_counts) > 1 {
+		count_ones_only = interval_counts[1]
+	}else{
+		count_ones_only = 0
+	}
+
+	if len(interval_counts) > 2 {
+		count_twos_only = interval_counts[2]
+	}else{
+		count_twos_only = 0
+	}
+	entry_1_1 := types.IntervalRangeEntry{
+		Bounds: [2]int{1,1},
+		Count : count_twos_only,
+		Mean: 1.0,
+	}
+	entry_2_2 := types.IntervalRangeEntry{
+		Bounds: [2]int{2,2},
+		Count: count_ones_only,
+		Mean: 2.0,
+	}
+
+	// PROBABLY go to one and two if other candidate count is just 1, no use in calculating scores on low values
+	var second_empty bool = candidates[1].Count <= 1
 	if second_empty {
 		goto ConsiderOnlyOneAndTwo
 	}
-	return types.GetZeroRangeEntry(), types.GetZeroRangeEntry()
+	
+	
+	{		
+
+		// multiply by scores involving big candidate to get more accurate prediction
+		var big_bias float64 = 1 + 0.1 * candidate_bigger.Mean
+
+		// score for [1,2] gridline size and second candidate as pixel size		
+		score_candidate_1_2 := float64(alternatingCandidatesRunlengthScore_1_2(intervals, candidate_bigger)) * big_bias
+		score_candidate_0_1 := float64(alternatingCandidatesRunlengthScore_0_1(intervals, candidate_bigger)) * big_bias
+		score_only_1_2 := float64(singleCandidateRunlengthScore(intervals, entry_1_2, 1)) 
+		// fmt.Println("SCORE CANDIDATE 1_2 ",score_candidate_1_2)
+		// fmt.Println("SCORE CANDIDATE 0_1", score_candidate_0_1)
+		// fmt.Println("SCORE ONLY 1_2", score_only_1_2)
+		
+		highest_score := max(score_candidate_0_1, score_candidate_1_2, score_only_1_2)
+
+		switch highest_score {
+		case score_only_1_2:
+			goto ConsiderOnlyOneAndTwo
+		case score_candidate_1_2:
+			return candidate_bigger, entry_1_2
+		default: // score_candidate_0_1
+			return candidate_bigger, entry_1_1
+
+		}
+
+	}
 
 
+	ConsiderOnlyOneAndTwo:{
 
-	ConsiderOnlyOneAndTwo:
-	fmt.Println("CONSIDERING ONLY ONE AND TWO")
-	return types.GetZeroRangeEntry(), types.GetZeroRangeEntry()
+		score_1 := singleCandidateRunlengthScore(intervals, entry_1_1, 0)
+		score_2 := singleCandidateRunlengthScore(intervals, entry_2_2, 0)
+		score_alternating_1_2 := alternatingCandidatesRunlengthScore(
+			intervals,
+			[2]types.IntervalRangeEntry{entry_1_1, entry_2_2},
+		)
+
+		// fmt.Println("CONSIDERING ONLY ONE AND TWO")
+		// fmt.Println("Scores: ", score_1, score_2, score_alternating_1_2)
+		highest_score := max(score_1, score_2, score_alternating_1_2)
+
+		switch highest_score {
+		case score_alternating_1_2:
+			return entry_2_2, entry_1_1
+		case score_2:
+			return entry_2_2, types.GetZeroRangeEntry()
+		default: // score_1
+			return entry_1_1, types.GetZeroRangeEntry()
+
+		}
+
+	}
+
 }
 
 func guessParametersNoOne(intervals types.IntervalList, inteval_counts []int, 
@@ -291,6 +376,43 @@ func alternatingCandidatesRunlengthScore(intervals types.IntervalList, candidate
 	return score
 }
 
+/*
+	Calculates special case for alternating interval items score, where width items are only 1 or 2 sized
+	and there is additional pre-processing performed.
+*/ 
+func alternatingCandidatesRunlengthScore_1_2(intervals types.IntervalList, candidate types.IntervalRangeEntry) int {
+	intervals_noedges := intervals.Intervals[1:intervals.TotalCount-1]
+	intervals_squashed := squashSurroundedDoubleOnesIntervals(intervals_noedges, candidate.Bounds)
+	var runlengths []int = alternatingCandidatesRunlengths(
+		intervals_squashed,
+		[2][2]int{candidate.Bounds, {1,2}},
+	)
+	score := sumLargerThan(runlengths, 1)
+	// test functionality, considers edges in 2-item sequences with 50% weight
+	score_with_ones := sumLargerThan(runlengths, 0)
+	score += ( score_with_ones - score) / 2 
+	return score
+
+}
+
+/*
+	Calculates special case for alternating interval items score, where width items are only 1 are absent completely
+	This means that for candidate in range [4,5], the following sequence is correct:
+	[5,5,4,1,4,5,1,4,5,1,5]
+
+*/ 
+func alternatingCandidatesRunlengthScore_0_1(intervals types.IntervalList, candidate types.IntervalRangeEntry) int {
+	intervals_noedges := intervals.Intervals[1:intervals.TotalCount-1]
+	var runlengths []int = singleCandidateWithOneRunlengths(intervals_noedges, candidate.Bounds)
+
+	score := sumLargerThan(runlengths, 1)
+	// test functionality, considers edges in 2-item sequences with 50% weight
+	score_with_ones := sumLargerThan(runlengths, 0)
+	score += ( score_with_ones - score) / 2 
+	return score
+
+}
+
 
 /*
 	Calculates score for comparing selected interval range entry candidate with other candidates and arrangements
@@ -351,6 +473,57 @@ func alternatingCandidatesRunlengths(intervals_noedges []uint, cadidate_bounds [
 
 
 /*
+	Given list of intervals without first and last elements, and bounds of an interval range entry,
+	Find all pairs of intervals such that:
+		 each pair consists of either:
+		 1. one interval conforming to interval range entry and one 1-length interval
+		 2.	Both intervals conforming to interval range entry
+	Returned slice contains lenghts of consecutive runlengths of such (overlapping) pairs 
+	Example : 
+		bounds = [4,5]
+		intervals = [2,5,1,7,4,4,5,4,1,5,7,1,5]
+
+	Then the substrings with all pairs conforming would be the following:
+		[5,1]
+		[4,4,5,4,1,5]
+		[1,5]
+	Hence the result slice would be: [1,5,1]
+
+	Made for spotting edge case between gridless and 1-width griddy image
+
+*/ 
+
+func singleCandidateWithOneRunlengths(intervals_noedges []uint, candidate_bounds [2]int) []int {
+	lookup_size := len(intervals_noedges) - 1
+	lookup := make([]bool, lookup_size)
+
+	for i := 0; i<lookup_size; i++ {
+		left := int(intervals_noedges[i])
+		right := int(intervals_noedges[i+1])
+
+		var left_belongs_to_candidate bool  = candidate_bounds[0] <= left && left <= candidate_bounds[1]
+		var right_belongs_to_candidate bool = candidate_bounds[0] <= right && right <= candidate_bounds[1]
+		var left_is_1 bool = left == 1
+		var right_is_1 bool = right == 1
+
+
+		var ok_edge_found bool =  left_belongs_to_candidate && right_belongs_to_candidate || 
+						   						  left_is_1 && right_belongs_to_candidate ||
+						   						  right_is_1 && left_belongs_to_candidate
+		lookup[i] = ok_edge_found
+
+	}
+
+	runlengths := consecutiveTrueRunlengths(lookup)
+	return runlengths
+
+}
+
+
+
+
+
+/*
 	Given list of intervals without first and last elements, and bounds of interval range entry,
 	Find all substrings of intervals data that are composed only of items within candidate bounds.
 	Returned slice contains lenghts of all such substrings. 
@@ -376,7 +549,7 @@ func singleCandidateRunlengths(intervals_noedges []uint, cadidate_bounds [2]int)
 
 
 /*
-	Given a slice of intervals (without edges) and bounds interval candidate entry,
+	Given a slice of intervals (without edges) and bounds of interval candidate entry,
 	return a same-lengthed slice of bools 
 	position is set to true if interval under the same index belongs to candidate bounds, otherwise false
 */
@@ -486,4 +659,55 @@ func isDoubleSizedIntervalAligned(intervals types.IntervalList, candidate types.
 
 	}
 	return true
+}
+
+
+/*
+	Given an interval slice (no edges) and bounds of interval candidate entry
+	Make a new slice, where each [1,1] sequence surrounded by items belonging to the entry bounds 
+	is squashed to a single item '2'
+
+	Example: 
+		bounds = [6,8]
+		intervals = [1,3,6,1,1,7,1,6,1,1,7,1,1,1,6]
+	Then result will be:
+		[1,3,6,2,7,1,6,2,7,1,1,1,6]
+
+*/
+func squashSurroundedDoubleOnesIntervals(intervals_noedges []uint, cadidate_bounds [2]int) []uint {
+	result := make([]uint, 0 , len(intervals_noedges))
+	if len(intervals_noedges) < 4 {
+		result = result[0:len(intervals_noedges)]
+		copy(result, intervals_noedges)
+		return result
+	}
+
+	//append first item since sliding window won't interact with it
+	result = append(result, intervals_noedges[0])
+	var i int
+	for i = 1; i < len(intervals_noedges) - 2; i++ {
+		left,    right    := intervals_noedges[i - 1], intervals_noedges[i + 2]
+		midleft, midright := intervals_noedges[i + 0], intervals_noedges[i + 1]
+
+		var middle_ones bool = midleft == 1 && midright == 1
+		var left_in_range bool  = int(left ) >= cadidate_bounds[0] && int(left ) <= cadidate_bounds[1]
+		var right_in_range bool = int(right) >= cadidate_bounds[0] && int(right) <= cadidate_bounds[1]	
+
+		all_conditions_met := middle_ones && left_in_range && right_in_range
+		if all_conditions_met {      
+			result = append(result, 2)
+			i += 1
+		}else{
+			result = append(result, midleft)
+		}
+
+	}
+
+	// append remaining items that werent covered by sliding window
+	// cant just add 2 last items, because if last window hits, there would be too much elements in result
+	for ;i < len(intervals_noedges); i++ {
+		result = append(result, intervals_noedges[i])
+	}
+
+	return result
 }

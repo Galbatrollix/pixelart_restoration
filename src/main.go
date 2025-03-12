@@ -37,7 +37,7 @@ func automaticGridDetectionMain(input_img *image.RGBA, debug bool) (*image.RGBA,
 	img_width, img_height := input_img.Rect.Dx(), input_img.Rect.Dy()
 
 	var img_preprocessed *image.RGBA = kuwahara.KuwaharaGaussian(input_img, 2, 1.5)
-	//img_preprocessed = input_img
+	// img_preprocessed = input_img
 
 	var edge_distances_rows *image.Gray = contrast.CalculatePixelEdgeDistances(img_preprocessed, false)
 	var edge_distances_cols *image.Gray = contrast.CalculatePixelEdgeDistances(img_preprocessed, true)
@@ -162,8 +162,8 @@ func testThroughDirectory(dirname string){
         filename_full := dirname + "/" + filename
         img, _ := images.RGBALoadFromFile(filename_full)
 
-        // img = images.ImageUpscaledWithGridlines(img,[4]uint8{0,0,0,255}, 2, 1)
-
+        //img = images.ImageUpscaledWithGridlines(img,[4]uint8{0,0,0,255}, 2, 1)
+        // img = images.ImageUpscaledByFactor(img, 2)
         fmt.Println(filename_full)
         automaticGridDetectionMain(img, false)
     }
@@ -172,7 +172,7 @@ func testThroughDirectory(dirname string){
 
 func main() {
 
-	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_grided/GRIDED_1.5_19.5_dragon2.png")
+	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_clean/CLEAN_34.5_paladin.png")
 	if(err != nil){
 		fmt.Println(err)
 		panic(1)
@@ -187,7 +187,9 @@ func main() {
     // test:=images.ImageUpscaledWithGridlines(img, [4]uint8{0,0,0,255}, 1,0 )
     // images.RGBASaveToFile("../images/DEBUG/TEST.png", test)
 
-    testThroughDirectory("../images/pixelarts_raw2")
+    // testThroughDirectory("../images/test_set_pixelarts_clean/")
+
+
 
 }
 

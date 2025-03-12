@@ -149,7 +149,6 @@ func DrawGridlineRowsOnImage(img *image.RGBA, y_indexes []int, color [4]uint8) {
 */
 func DrawGridlineColsOnImage(img *image.RGBA, x_indexes []int, color [4]uint8){
 	height, width := img.Rect.Dy(), img.Rect.Dx()
-
 	//validate y_indexes
 	for _, x_id := range x_indexes{
 		if x_id < 0 {

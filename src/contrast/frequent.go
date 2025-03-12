@@ -39,8 +39,7 @@ func GetBaseMostFrequentParams() MostFrequentParams {
 func SelectMostFrequent(edge_counts []uint, params MostFrequentParams) []int {
 	if len(edge_counts) == 0 {
 		return []int{}
-	}
-
+	}	
 	counter := edgeCountsSortedNonzero(edge_counts)
 	
 	clip_amount := int(params.ClipTop * float32(len(counter)))
@@ -49,6 +48,7 @@ func SelectMostFrequent(edge_counts []uint, params MostFrequentParams) []int {
 
 	// all indexes with less count than this will not pass
 	threshold_quantity := uint(float32(counter[sample_val_id]) * params.CutoffMultiplier)
+	threshold_quantity = max(threshold_quantity, 1)
 
 	result := make([]int, 0, len(counter))
 
@@ -58,7 +58,6 @@ func SelectMostFrequent(edge_counts []uint, params MostFrequentParams) []int {
 			result = append(result, i)
 		}
 	}
-
 	return result
 }
 
