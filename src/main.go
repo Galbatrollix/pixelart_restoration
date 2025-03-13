@@ -187,7 +187,7 @@ func main() {
     // test:=images.ImageUpscaledWithGridlines(img, [4]uint8{0,0,0,255}, 1,0 )
     // images.RGBASaveToFile("../images/DEBUG/TEST.png", test)
 
-    // testThroughDirectory("../images/test_set_pixelarts_clean/")
+    testThroughDirectory("../images/test_set_pixelarts_clean/")
 
 
 

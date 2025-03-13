@@ -18,7 +18,7 @@ import (
 */
 
 func GuessGridlineParameters(intervals types.IntervalList) (types.IntervalRangeEntry, types.IntervalRangeEntry) {
-	if intervals.TotalCount < 3 {
+	if len(intervals.Intervals) < 3 {
 		return types.GetZeroRangeEntry(), types.GetZeroRangeEntry()
 	}
 
@@ -227,7 +227,7 @@ func guessParametersNoOne(intervals types.IntervalList, inteval_counts []int,
 	First and last (if any) intervals are removed before the calculation
 */
 func getIntervalCounts(intervals types.IntervalList) []int {
-	intervals_noedges := intervals.Intervals[1:intervals.TotalCount-1]
+	intervals_noedges := intervals.Intervals[1:len(intervals.Intervals)-1]
 
 	largest_interval := int(slices.Max(intervals_noedges))
 	counts := make([]int, largest_interval + 1)
@@ -362,7 +362,7 @@ func rangesWithCollisionsZeroed(entries []types.IntervalRangeEntry, sample types
 	Calculates score for comparing alternating interval arrangement with other candidates
 */
 func alternatingCandidatesRunlengthScore(intervals types.IntervalList, candidates [2]types.IntervalRangeEntry) int {
-	intervals_noedges := intervals.Intervals[1:intervals.TotalCount-1]
+	intervals_noedges := intervals.Intervals[1:len(intervals.Intervals)-1]
 	var runlengths []int = alternatingCandidatesRunlengths(
 		intervals_noedges,
 		[2][2]int{candidates[0].Bounds ,candidates[1].Bounds},
@@ -381,7 +381,7 @@ func alternatingCandidatesRunlengthScore(intervals types.IntervalList, candidate
 	and there is additional pre-processing performed.
 */ 
 func alternatingCandidatesRunlengthScore_1_2(intervals types.IntervalList, candidate types.IntervalRangeEntry) int {
-	intervals_noedges := intervals.Intervals[1:intervals.TotalCount-1]
+	intervals_noedges := intervals.Intervals[1:len(intervals.Intervals)-1]
 	intervals_squashed := squashSurroundedDoubleOnesIntervals(intervals_noedges, candidate.Bounds)
 	var runlengths []int = alternatingCandidatesRunlengths(
 		intervals_squashed,
@@ -402,7 +402,7 @@ func alternatingCandidatesRunlengthScore_1_2(intervals types.IntervalList, candi
 
 */ 
 func alternatingCandidatesRunlengthScore_0_1(intervals types.IntervalList, candidate types.IntervalRangeEntry) int {
-	intervals_noedges := intervals.Intervals[1:intervals.TotalCount-1]
+	intervals_noedges := intervals.Intervals[1:len(intervals.Intervals)-1]
 	var runlengths []int = singleCandidateWithOneRunlengths(intervals_noedges, candidate.Bounds)
 
 	score := sumLargerThan(runlengths, 1)
@@ -418,7 +418,7 @@ func alternatingCandidatesRunlengthScore_0_1(intervals types.IntervalList, candi
 	Calculates score for comparing selected interval range entry candidate with other candidates and arrangements
 */
 func singleCandidateRunlengthScore(intervals types.IntervalList, candidate types.IntervalRangeEntry, min_runglength int) int {
-	intervals_noedges := intervals.Intervals[1:intervals.TotalCount-1]
+	intervals_noedges := intervals.Intervals[1:len(intervals.Intervals)-1]
 
 	var runlengths []int = singleCandidateRunlengths(intervals_noedges, candidate.Bounds)
 	score := sumLargerThan(runlengths, min_runglength)
@@ -639,7 +639,7 @@ func indexesOfTrue(slice []bool) []int {
     4,4,3,4 add up to 15, which is very close to 16 (2 * 8)
  */
 func isDoubleSizedIntervalAligned(intervals types.IntervalList, candidate types.IntervalRangeEntry) bool{
-	var intervals_noedges []uint = intervals.Intervals[1:intervals.TotalCount - 1]
+	var intervals_noedges []uint = intervals.Intervals[1:len(intervals.Intervals) - 1]
 	var belongment_array []bool = candidateBelongsLookup(intervals_noedges, candidate.Bounds)
 	var indexes_true []int = indexesOfTrue(belongment_array)
 
