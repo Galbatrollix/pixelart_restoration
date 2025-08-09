@@ -3,7 +3,6 @@ package gridlines
 import (
 	"slices"
 	"math"
-	"fmt"
 )
 import (
 	"pixel_restoration/types"
@@ -49,8 +48,6 @@ func GuessGridlineParameters(intervals types.IntervalList) (types.IntervalRangeE
 		)
 	}
 
-	fmt.Printf("Pixel Guess: %-v\nGrid guess: %-v\n", pixel_guess, grid_guess)
-
 	return pixel_guess, grid_guess
 }
 
@@ -66,11 +63,6 @@ func guessParametersWithOne(intervals types.IntervalList, interval_counts []int,
 		candidate_smaller, candidate_bigger = candidates[0], candidates[1]
 	}
 
-	entry_1_2 := types.IntervalRangeEntry{
-		Bounds: [2]int{1,2},
-		Count: candidate_smaller.Count,
-		Mean: candidate_smaller.Mean,
-	}
 	var count_ones_only int
 	var count_twos_only int
 	if len(interval_counts) > 1 {
@@ -83,6 +75,17 @@ func guessParametersWithOne(intervals types.IntervalList, interval_counts []int,
 		count_twos_only = interval_counts[2]
 	}else{
 		count_twos_only = 0
+	}
+
+	entry_0_1 := types.IntervalRangeEntry{
+		Bounds: [2]int{0,1},
+		Count: count_ones_only,
+		Mean: 0.0,
+	}
+	entry_1_2 := types.IntervalRangeEntry{
+		Bounds: [2]int{1,2},
+		Count: candidate_smaller.Count,
+		Mean: candidate_smaller.Mean,
 	}
 	entry_1_1 := types.IntervalRangeEntry{
 		Bounds: [2]int{1,1},
@@ -103,7 +106,6 @@ func guessParametersWithOne(intervals types.IntervalList, interval_counts []int,
 	
 	
 	{		
-
 		// multiply by scores involving big candidate to get more accurate prediction
 		var big_bias float64 = 1 + 0.1 * candidate_bigger.Mean
 
@@ -123,7 +125,7 @@ func guessParametersWithOne(intervals types.IntervalList, interval_counts []int,
 		case score_candidate_1_2:
 			return candidate_bigger, entry_1_2
 		default: // score_candidate_0_1
-			return candidate_bigger, entry_1_1
+			return candidate_bigger, entry_0_1
 
 		}
 
@@ -520,9 +522,6 @@ func singleCandidateWithOneRunlengths(intervals_noedges []uint, candidate_bounds
 }
 
 
-
-
-
 /*
 	Given list of intervals without first and last elements, and bounds of interval range entry,
 	Find all substrings of intervals data that are composed only of items within candidate bounds.
@@ -660,7 +659,6 @@ func isDoubleSizedIntervalAligned(intervals types.IntervalList, candidate types.
 	}
 	return true
 }
-
 
 /*
 	Given an interval slice (no edges) and bounds of interval candidate entry
