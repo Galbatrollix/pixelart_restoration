@@ -20,32 +20,25 @@ func GridlinesFixErrors(original_combined_list types.CombinedList, pixel_guess, 
 	left_edge_unknown, right_edge_unknown, middle_unknowns = separateUnknownItems(original_combined_list)
 	var mean_pixel, mean_grid float64 = calculateItemAverages(original_combined_list, pixel_guess, grid_guess, [][]uint{})
 
-	middle_fixed := make([][]uint, len(middle_unknowns))
+	// making continous space for all fixed unknown sections, including edges
+	fixed_sections := make([][]uint, len(middle_unknowns) + 2)
+
+	middle_fixed := fixed_sections[1:len(middle_unknowns) + 1]
 	for i := range middle_unknowns {
 		middle_fixed[i] = guessMiddleUnknownSection(middle_unknowns[i], mean_pixel, mean_grid)
 	}
 
-	fmt.Println(left_edge_unknown, right_edge_unknown, middle_unknowns)
-	fmt.Println(mean_pixel, mean_grid)
-
-	fmt.Println("DUPA", middle_fixed)
 	// recalculating averages with fixed sections to improve acuraccy for edge guessing
 	mean_pixel, mean_grid = calculateItemAverages(original_combined_list, pixel_guess, grid_guess, middle_fixed)
-	fmt.Println(mean_pixel, mean_grid)
 
 	left_edge_fixed  := guessEdgeUnknownSection(left_edge_unknown, mean_pixel, mean_grid, true)
 	right_edge_fixed := guessEdgeUnknownSection(right_edge_unknown, mean_pixel, mean_grid, false)
-	_,_ = left_edge_fixed, right_edge_fixed
+	fixed_sections[0] = left_edge_fixed
+	fixed_sections[len(middle_unknowns) + 1] = right_edge_fixed
 
-	return original_combined_list
-	// return reAssembleCombinedList(
-	// 	original_combined_list,
-	// 	middle_fixed,
-	// 	left_edge_fixed,
-	// 	right_edge_fixed,
-	// )
-
-
+	var fixed_combined_list types.CombinedList = reAssembleCombinedList(original_combined_list, fixed_sections)
+	fmt.Println("INTERVALS: ", fixed_combined_list.Intervals)
+	return fixed_combined_list
 
 }
 
@@ -381,66 +374,94 @@ func trimSequenceFromRight(interval_sequence *[]uint, target_item_length uint){
 	(*interval_sequence)[current_index] -= difference
 }
 
-// /*
-// 	Given original combined list with unknown sections and slices describing 
-// 	guessed values for each unknown section, generate a new "fixed" combined list struct.
+/*
+	Given original combined list with unknown sections and slices describing 
+	guessed values for each unknown section, generate a new "fixed" combined list struct.
 
-// 	Resulting combined list doesn't contain "unknown" items 
-// 	and must contain alternating "grid" and "pixel" type items only,
+	Resulting combined list doesn't contain any "unknown" items 
+	and must contain alternating "grid" and "pixel" type items only
 
-// */
+*/
 
-// func reAssembleCombinedList(
-// 	original_list types.CombinedList,
-// 	middle_sections [][]uint,
-// 	left_edge, right_edge []uint,
-// ) types.CombinedList {
-// 	var result_length int = reAssembleGetTotalLength(original_list, middle_sections, left_edge, right_edge)
-// 	var intervals []uint = reAssembleCreateIntervals(result_length, original_list, middle_sections, left_edge, right_edge)
+func reAssembleCombinedList(original_list types.CombinedList, fixed_sections [][]uint) types.CombinedList {
+	var result_length int = reAssembleGetTotalLength(original_list, fixed_sections)
+	var intervals []uint = reAssembleCreateIntervals(result_length, original_list, fixed_sections)
 
-// 	var starts_with_grid bool = ...
-//  	var interval_types []uint8 = reAssembleCreateTypes(result_length, starts_with_grid)
+	var starts_with_grid bool = len(fixed_sections[0]) % 2 == 1
+ 	var interval_types []uint8 = reAssembleCreateTypes(result_length, starts_with_grid)
 
-//  	return types.CombinedList{intervals, interval_types} 
-// }
+ 	return types.CombinedList{intervals, interval_types} 
+}
 
-// /*
-// 	Part of reAssembleCombinedList function. 
-// 	Based on original combined list and fixed sections, calculate exact number of interval items 
-// 	that the resultant combined list will hold.
-// */
-// func reAssembleGetTotalLength(
-// 	original_list types.CombinedList,
-// 	middle_sections [][]uint,
-// 	left_edge, right_edge []uint,
-// ) int {
-// 	original_count_total := len(original_list.Intervals)
-// 	unknowns_count := len(middle_sections) + 2 
+/*
+	Part of reAssembleCombinedList function. 
+	Based on original combined list and fixed sections, calculate exact number of interval items 
+	that the resultant combined list will hold.
+*/
+func reAssembleGetTotalLength(original_list types.CombinedList, fixed_sections [][]uint) int {
+	original_count_total := len(original_list.Intervals)
+	unknowns_count := len(fixed_sections)
 
-// 	fixed_sections_element_count := len(left_edge) + len(right_edge)
-// 	for _, section := range middle_sections {
-// 		fixed_sections_element_count += len(section)
-// 	}
+	fixed_sections_element_count := 0
+	for _, section := range fixed_sections {
+		fixed_sections_element_count += len(section)
+	}
 
-// 	return original_count_total - unknowns_count + fixed_sections_element_count
-// }
+	return original_count_total - unknowns_count + fixed_sections_element_count
+}
 
-// /*
-// 	Part of reAssembleCombinedList function. 
-// 	Based on original combined list and fixed sections,
-// 	construct a fully complete intervals slice for new combined list instance.
+/*
+	Part of reAssembleCombinedList function. 
+	Based on original combined list and fixed sections,
+	construct a fully complete intervals slice for new combined list instance.
 
-// 	Exact count of elements in result array is provided as first parameter.
-// */
-// func reAssembleCreateIntervals(
-// 	result_length int,
-// 	original_list types.CombinedList,
-// 	middle_sections [][]uint,
-// 	left_edge, right_edge []uint,
-// ) []uint {
-// 	intervals := make([]uint, result_length)
+	Exact count of elements in result array is provided as first parameter.
+*/
+func reAssembleCreateIntervals(
+	result_length int,
+	original_list types.CombinedList,
+	fixed_sections [][]uint,
+) []uint {
+	new_intervals := make([]uint, result_length)
+	var intervals_id int = 0
+	var current_section int = 0
 
+	var original_list_len int = len(original_list.Intervals)
+	for i := 0; i < original_list_len; i++ {
+		var is_unknown bool = original_list.IntervalTypes[i] == types.INTERVAL_UNKNOWN
+		if is_unknown {
+			for _, item_length := range fixed_sections[current_section]{
+				new_intervals[intervals_id] = item_length
+				intervals_id += 1
+			}
+			current_section += 1
+		}else{ // non-unknown item
+			var item_length uint = original_list.Intervals[i]
+			new_intervals[intervals_id] = item_length
+			intervals_id += 1
+		}
 
+	}
 
-// 	return intervals
-// }
+	return new_intervals
+}
+
+/*
+	Part of reAssembleCombinedList function. 
+	Constructs interval types slice for combined list 
+	based on total list length and type of first element.
+*/
+func reAssembleCreateTypes(result_length int, starts_with_grid bool) []uint8{
+	new_interval_types := make([]uint8, result_length)
+	var even_lookup [2]uint8
+	if starts_with_grid {
+		even_lookup = [2]uint8{types.INTERVAL_GRID, types.INTERVAL_PIXEL}
+	}else{
+		even_lookup = [2]uint8{types.INTERVAL_PIXEL, types.INTERVAL_GRID}
+	}
+
+	for i := range new_interval_types {
+		new_interval_types[i] = even_lookup[i % 2]
+	}
+	return new_interval_types
+}

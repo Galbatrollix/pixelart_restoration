@@ -81,8 +81,12 @@ func automaticGridDetectionMain(input_img *image.RGBA, debug bool) (*image.RGBA,
 		cols_intervals, [2]types.IntervalRangeEntry{cols_pixel_guess, cols_gridline_guess},
 	)
 
-	gridlines.GridlinesFixErrors(rows_combined_list, rows_pixel_guess, rows_gridline_guess)
-	gridlines.GridlinesFixErrors(cols_combined_list, cols_pixel_guess, cols_gridline_guess)
+	var rows_error_fixed types.CombinedList = gridlines.GridlinesFixErrors(
+		rows_combined_list, rows_pixel_guess,rows_gridline_guess,
+	)
+	var cols_error_fixed types.CombinedList = gridlines.GridlinesFixErrors(
+		cols_combined_list, cols_pixel_guess, cols_gridline_guess,
+	)
 
 	if debug {
 		fmt.Println("Image size (width, height): ", img_width, img_height)
@@ -150,6 +154,13 @@ func automaticGridDetectionMain(input_img *image.RGBA, debug bool) (*image.RGBA,
 		)
 		_ = images.RGBASaveToFile(DEBUG_DIR_PATH+"/9_with_unknowns.png", unknowns_image)
 
+		fixed_image := visualizations.ImageWithDrawnCutoutSimpleWithZeros(
+			input_img,
+			[2]types.CombinedList{cols_error_fixed, rows_error_fixed},
+			[4]uint8{0, 0, 255, 255},
+			[4]uint8{255, 0, 255, 255},
+		)
+		_ = images.RGBASaveToFile(DEBUG_DIR_PATH+"/10_error_fixed.png", fixed_image)
 	}
 
 	return nil, nil
@@ -172,8 +183,8 @@ func testThroughDirectory(dirname string) {
 }
 
 func main() {
-
-	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_grided/GRIDED_1_3_horrid_quality.png")
+	// good test case: 1_3_horrid quality
+	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_grided/GRIDED_2.5_8_roses.png")
 
 	if err != nil {
 		fmt.Println(err)
