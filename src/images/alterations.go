@@ -10,6 +10,8 @@ package images
 
 import (
 	"image"
+	"image/draw"
+	"image/color"
 	"fmt"
 )
 
@@ -179,3 +181,42 @@ func gridlineIdsForUpscaled(dim_size int, scaling_factor int, gridline_width int
 	return ids
 }
 
+
+/*
+	Fills entirety of a RGBA image with provided color.
+	Temporarily works using builtin not-in-place method.
+	TODO: Rework to handrolled in-place method.
+
+*/
+func RGBAFillColor2(img *image.RGBA, fill_color [4]uint8){
+	color_rgba := color.RGBA{
+		R: fill_color[0],
+		G: fill_color[1],
+		B: fill_color[2],
+		A: fill_color[3],
+	}
+	draw.Draw(img, img.Bounds(), &image.Uniform{color_rgba}, img.Bounds().Min, draw.Src)
+}
+
+/*
+	Fills entirety of a RGBA image with provided color.
+	Faster than using draw package from standard library
+*/
+func RGBAFillColor(img *image.RGBA, fill_color [4]uint8){
+	color_as_slice := fill_color[:]
+	base_index := -img.PixOffset(0, 0)
+	// fill fist row by copying values from color one by one
+	for x := 0; x < img.Rect.Dx(); x++ {
+		dest_pixel := img.Pix[base_index + x*4: base_index + (x + 1)* 4]
+		copy(dest_pixel, color_as_slice)
+	}
+
+	// fill remaining rows (if any) by copying first row into them
+	row_length_bytes := img.Rect.Dx() * 4
+	first_row := img.Pix[base_index: base_index + row_length_bytes]
+	for y := 1; y < img.Rect.Dy(); y++{
+		row_begin := base_index + y * img.Stride
+		row := img.Pix[row_begin: row_begin + row_length_bytes]
+		copy(row, first_row)
+	}
+}

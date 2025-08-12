@@ -202,7 +202,7 @@ func testThroughDirectory(dirname string) {
 func main() {
 	// good test case: 1_3_horrid quality
 	// good test case 2.5_8 roses
-	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_paper/PAPER_3.5_stitch.png")
+	img, err := images.RGBALoadFromFile("../images/pixelarts_raw2/CLEAN_4_gigantic_difficulty_faces.png.png")
 
 	if err != nil {
 		fmt.Println(err)
@@ -215,9 +215,36 @@ func main() {
 	// elapsed := time.Since(start)
 	// fmt.Println(elapsed)
     _ = time.Now()
-	test:=images.ImageUpscaledWithGridlines(img, [4]uint8{0,0,0,255}, 1,0 )
-	images.RGBASaveToFile("../images/DEBUG/TEST.png", test)
-	// test2 := images.ImageUpscaledAdvanced(img, )
+	// test:=images.ImageUpscaledWithGridlines(img, [4]uint8{0,0,0,255}, 1,0 )
+	// images.RGBASaveToFile("../images/DEBUG/TEST.png", test)
+
+	var pixel, grid uint = 32, 3
+	start := time.Now()
+	var dst_rect image.Rectangle = images.AdvancedUpscaleGetResultDimensions(img.Rect, pixel, grid)
+	destination_img := image.NewRGBA(dst_rect)
+	images.ImageUpscaledAdvanced(img, destination_img, pixel, grid, [4]uint8{0,0,0,255})
+	elapsed := time.Since(start)
+	fmt.Println(elapsed)
+
+	// temp := image.NewRGBA(image.Rect(0,0,5,5))
+	// sub := temp.SubImage(image.Rect(1,1,5,5)).(*image.RGBA)
+
+
+	images.RGBASaveToFile("../images/DEBUG/TEST.png", destination_img)
+
+	test := image.NewRGBA(image.Rect(0,0,10000,10000))
+
+	start = time.Now()
+	images.RGBAFillColor(test, [4]uint8{0,0,0,255})
+	elapsed = time.Since(start)
+	fmt.Println(elapsed)
+
+	start = time.Now()
+	images.RGBAFillColor2(test, [4]uint8{0,0,0,255})
+	elapsed = time.Since(start)
+	fmt.Println(elapsed)
+
+
 
 	// testThroughDirectory("../images/test_set_pixelarts_clean/")
 
