@@ -1,7 +1,7 @@
 package gridlines 
 
 import (
-	"fmt"
+	//"fmt"
 	"math"
 	"slices"
 )
@@ -37,7 +37,6 @@ func GridlinesFixErrors(original_combined_list types.CombinedList, pixel_guess, 
 	fixed_sections[len(middle_unknowns) + 1] = right_edge_fixed
 
 	var fixed_combined_list types.CombinedList = reAssembleCombinedList(original_combined_list, fixed_sections)
-	fmt.Println("INTERVALS: ", fixed_combined_list.Intervals)
 	return fixed_combined_list
 
 }
@@ -418,9 +417,7 @@ func reAssembleGetTotalLength(original_list types.CombinedList, fixed_sections [
 	Exact count of elements in result array is provided as first parameter.
 */
 func reAssembleCreateIntervals(
-	result_length int,
-	original_list types.CombinedList,
-	fixed_sections [][]uint,
+	result_length int, original_list types.CombinedList, fixed_sections [][]uint,
 ) []uint {
 	new_intervals := make([]uint, result_length)
 	var intervals_id int = 0

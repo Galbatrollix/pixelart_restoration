@@ -153,6 +153,14 @@ func automaticGridDetectionMain(input_img *image.RGBA, debug bool) (*image.RGBA,
 			[4]uint8{255, 0, 255, 255},
 		)
 		_ = images.RGBASaveToFile(DEBUG_DIR_PATH+"/9_with_unknowns.png", unknowns_image)
+		unknowns_image_big := visualizations.ImageWithDrawnCombinedListAdvanced(
+			input_img,
+			[2]types.CombinedList{cols_combined_list, rows_combined_list},
+			[4]uint8{0, 0, 255, 255},
+			[4]uint8{255, 0, 255, 255},
+		)
+
+		_ = images.RGBASaveToFile(DEBUG_DIR_PATH+"/10_with_unknowns_advanced.png", unknowns_image_big)
 
 		fixed_image := visualizations.ImageWithDrawnCutoutSimpleWithZeros(
 			input_img,
@@ -160,7 +168,16 @@ func automaticGridDetectionMain(input_img *image.RGBA, debug bool) (*image.RGBA,
 			[4]uint8{0, 0, 255, 255},
 			[4]uint8{255, 0, 255, 255},
 		)
-		_ = images.RGBASaveToFile(DEBUG_DIR_PATH+"/10_error_fixed.png", fixed_image)
+		_ = images.RGBASaveToFile(DEBUG_DIR_PATH+"/11_error_fixed.png", fixed_image)
+
+		fixed_image_big := visualizations.ImageWithDrawnCombinedListAdvanced(
+			input_img,
+			[2]types.CombinedList{cols_error_fixed, rows_error_fixed},
+			[4]uint8{0, 0, 255, 255},
+			[4]uint8{255, 0, 255, 255},
+		)
+
+		_ = images.RGBASaveToFile(DEBUG_DIR_PATH+"/12_error_fixed_advanced.png", fixed_image_big)
 	}
 
 	return nil, nil
@@ -184,21 +201,23 @@ func testThroughDirectory(dirname string) {
 
 func main() {
 	// good test case: 1_3_horrid quality
-	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_grided/GRIDED_2.5_8_roses.png")
+	// good test case 2.5_8 roses
+	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_paper/PAPER_3.5_stitch.png")
 
 	if err != nil {
 		fmt.Println(err)
 		panic(1)
 	}
 
-	start := time.Now()
-	const DEBUG = true
-	automaticGridDetectionMain(img, DEBUG)
-	elapsed := time.Since(start)
-	fmt.Println(elapsed)
-
-	// test:=images.ImageUpscaledWithGridlines(img, [4]uint8{0,0,0,255}, 1,0 )
-	// images.RGBASaveToFile("../images/DEBUG/TEST.png", test)
+	// start := time.Now()
+	// const DEBUG = true
+	// automaticGridDetectionMain(img, DEBUG)
+	// elapsed := time.Since(start)
+	// fmt.Println(elapsed)
+    _ = time.Now()
+	test:=images.ImageUpscaledWithGridlines(img, [4]uint8{0,0,0,255}, 1,0 )
+	images.RGBASaveToFile("../images/DEBUG/TEST.png", test)
+	// test2 := images.ImageUpscaledAdvanced(img, )
 
 	// testThroughDirectory("../images/test_set_pixelarts_clean/")
 
