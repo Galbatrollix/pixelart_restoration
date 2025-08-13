@@ -30,7 +30,7 @@ func automaticGridDetectionMain(input_img *image.RGBA, debug bool) (*image.RGBA,
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	*/
-	// input_img = images.ImageUpscaledWithGridlines(input_img, [4]uint8{0,0,0,255},2,1)
+	//input_img = images.AdvancedUpscaleGetNewImage(input_img, 2, 1, [4]uint8{0,0,0,255})
 
 	img_width, img_height := input_img.Rect.Dx(), input_img.Rect.Dy()
 
@@ -191,8 +191,8 @@ func testThroughDirectory(dirname string) {
 		filename_full := dirname + "/" + filename
 		img, _ := images.RGBALoadFromFile(filename_full)
 
-		//img = images.ImageUpscaledWithGridlines(img,[4]uint8{0,0,0,255}, 2, 1)
-		// img = images.ImageUpscaledByFactor(img, 2)
+		// img = images.AdvancedUpscaleGetNewImage(img, 2, 1, [4]uint8{0,0,0,255})
+		// img = images.AdvancedUpscaleGetNewImage(img, 2, 0, [4]uint8{0,0,0,255})
 		fmt.Println(filename_full)
 		automaticGridDetectionMain(img, false)
 	}
@@ -200,50 +200,36 @@ func testThroughDirectory(dirname string) {
 }
 
 func main() {
+    _ = time.Now()
+
 	// good test case: 1_3_horrid quality
 	// good test case 2.5_8 roses
-	img, err := images.RGBALoadFromFile("../images/pixelarts_raw2/CLEAN_4_gigantic_difficulty_faces.png.png")
+	img, err := images.RGBALoadFromFile("../images/test_set_pixelarts_grided/GRIDED_1.5_10.5_dragon_eye.png")
 
 	if err != nil {
 		fmt.Println(err)
 		panic(1)
 	}
 
-	// start := time.Now()
-	// const DEBUG = true
-	// automaticGridDetectionMain(img, DEBUG)
-	// elapsed := time.Since(start)
-	// fmt.Println(elapsed)
-    _ = time.Now()
-	// test:=images.ImageUpscaledWithGridlines(img, [4]uint8{0,0,0,255}, 1,0 )
-	// images.RGBASaveToFile("../images/DEBUG/TEST.png", test)
-
-	var pixel, grid uint = 32, 3
 	start := time.Now()
-	var dst_rect image.Rectangle = images.AdvancedUpscaleGetResultDimensions(img.Rect, pixel, grid)
-	destination_img := image.NewRGBA(dst_rect)
-	images.ImageUpscaledAdvanced(img, destination_img, pixel, grid, [4]uint8{0,0,0,255})
+	const DEBUG = true
+	automaticGridDetectionMain(img, DEBUG)
 	elapsed := time.Since(start)
 	fmt.Println(elapsed)
 
-	// temp := image.NewRGBA(image.Rect(0,0,5,5))
-	// sub := temp.SubImage(image.Rect(1,1,5,5)).(*image.RGBA)
 
+	/*	 testing upscale 
+
+	var pixel, grid uint = 32, 0
+	start := time.Now()
+	var dst_rect image.Rectangle = images.AdvancedUpscaleGetResultDimensions(img.Rect, pixel, grid)
+	destination_img := image.NewRGBA(dst_rect)
+	images.AdvancedUpscale(img, destination_img, pixel, grid, [4]uint8{0,0,0,255})
+	elapsed := time.Since(start)
+	fmt.Println(elapsed)
 
 	images.RGBASaveToFile("../images/DEBUG/TEST.png", destination_img)
-
-	test := image.NewRGBA(image.Rect(0,0,10000,10000))
-
-	start = time.Now()
-	images.RGBAFillColor(test, [4]uint8{0,0,0,255})
-	elapsed = time.Since(start)
-	fmt.Println(elapsed)
-
-	start = time.Now()
-	images.RGBAFillColor2(test, [4]uint8{0,0,0,255})
-	elapsed = time.Since(start)
-	fmt.Println(elapsed)
-
+	*/
 
 
 	// testThroughDirectory("../images/test_set_pixelarts_clean/")

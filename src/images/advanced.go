@@ -1,15 +1,7 @@
 package images
 
 import "image"
-
 import "fmt"
-
-
-func temp(){
-	if false {
-		fmt.Println("STOP COMPLAINING ABOUT UNUSED FMT")
-	}
-}
 
 /*
 	Given <src> RGBA image, upscale it by expanding each original pixel to <pixel_size> x <pixel_size> square block
@@ -17,11 +9,11 @@ func temp(){
 	before first-in-row/column square block and after last-in-row/column square block. 
 
 	Resulting image is saved to <dst> RGBA image provided by the caller. 
-	Both <src> and <dst> can be subimages (images where rectangle doesn't start at 0,0 and stride doesn't equal Dx)
+	Both <src> and <dst> can be subimages (images where rectangle doesn't start at 0,0 and stride doesn't equal 4 * Dx)
 	Function will panic if rectangle of <dst> has wrong dimensions.
 */
 
-func ImageUpscaledAdvanced(src, dst *image.RGBA, pixel_size, grid_size uint, grid_color [4]uint8){
+func AdvancedUpscale(src, dst *image.RGBA, pixel_size, grid_size uint, grid_color [4]uint8){
 	advancedUpscaleValidateArguments(src, dst, pixel_size, grid_size)
 	RGBAFillColor(dst, grid_color)
 
@@ -70,11 +62,10 @@ func ImageUpscaledAdvanced(src, dst *image.RGBA, pixel_size, grid_size uint, gri
 			copy(dst_target_row, dst_row_for_copy)
 		}
 	}
-
 }
 
 /*
-	Does basic validation on input data for function ImageUpscaledAdvanced.
+	Does basic validation on input data for function AdvancedUpscale.
 	Panics on invalid arguments, does nothing otherwise.
 
 	Does not concern itself with check if dst and src overlap. 
@@ -120,4 +111,19 @@ func AdvancedUpscaleGetResultDimensions(src_rect image.Rectangle, pixel_size, gr
 
 	return image.Rect(0,0, dst_width, dst_height)
 
+}
+
+/*
+
+	Creates and returns an entirely new image upscaled by the rules of "AdvancedUpscale" function.
+
+	Resulting image is not a subimage.
+	(result.Rect.Min == 0,0 , result.Stride == result.Rect.Dx() * 4)
+
+*/
+func AdvancedUpscaleGetNewImage(src *image.RGBA, pixel_size, grid_size uint, grid_color [4]uint8) *image.RGBA {
+	var dst_rect image.Rectangle = AdvancedUpscaleGetResultDimensions(src.Rect, pixel_size, grid_size)
+	var dst *image.RGBA = image.NewRGBA(dst_rect)
+	AdvancedUpscale(src, dst, pixel_size, grid_size, grid_color)
+	return dst
 }

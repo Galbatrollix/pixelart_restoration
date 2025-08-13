@@ -1,7 +1,6 @@
 package visualizations
 
 import "image"
-import "image/draw"
 
 import "pixel_restoration/images"
 import "pixel_restoration/types"
@@ -25,7 +24,10 @@ func ImageWithDrawnGridlinesSimple(img *image.RGBA, indexes[2][]int, color [4]ui
 */
 func ImageWithDrawnGridlinesAdvanced(img *image.RGBA, indexes[2][]int, color [4]uint8) *image.RGBA{
 	const pixel_size = 5
-	img_big := imageUpscaledWithBlackGrid(img, pixel_size)
+	const grid_size = 1
+	color_black := [4]uint8{0,0,0,255}
+
+	var img_big *image.RGBA = images.AdvancedUpscaleGetNewImage(img, pixel_size, grid_size, color_black)
 	
 	// Drawing selected edges in provided color
 	indexes_scaled := [2][]int{
@@ -52,9 +54,13 @@ func ImageWithDrawnGridlinesAdvanced(img *image.RGBA, indexes[2][]int, color [4]
 func ImageWithDrawnCombinedListAdvanced(
 	img *image.RGBA, combined_lists[2] types.CombinedList, color_unknown, color_gridline [4]uint8,
 ) *image.RGBA {
-	const pixel_size = 5
-	img_big := imageUpscaledWithBlackGrid(img, pixel_size)
 
+	// obtain upscaled image with black grid
+	const pixel_size = 5
+	const grid_size = 1
+	color_black := [4]uint8{0,0,0,255}
+
+	var img_big *image.RGBA = images.AdvancedUpscaleGetNewImage(img, pixel_size, grid_size, color_black)
 
 	unknown_ranges := [2][][2]int{
 		getIntervalTypePixelRanges(combined_lists[0], types.INTERVAL_UNKNOWN),
@@ -93,46 +99,6 @@ func ImageWithDrawnCombinedListAdvanced(
 	return img_big
 }
 
-/* 
-	This function is rather sloppy, but it's enough for time being.
-	TODO: Make a fully featured scale with gridlines function that will work in other project :tm
-
-	This function upscales image by scaling each pixel to <pixel_size> times <pixel_size> square
-	 and adds black gridlines such as that: 
-	 	- between each pair of squares reperesenting original pixels, inserts 1 pixel of grid
-	 	- first and last column/row of the image is also a pixel of black grid
-*/
-
-func imageUpscaledWithBlackGrid(img *image.RGBA, pixel_size int) *image.RGBA {
-	scaling_factor := pixel_size + 1
-	new_rect :=  image.Rect(
-		0, 0,
-		img.Rect.Dx() * scaling_factor + 1,
-		img.Rect.Dy() * scaling_factor + 1,
-	)
-	img_big := image.NewRGBA(new_rect)
-	big_subimage := img_big.SubImage(
-		image.Rectangle{
-			Min: image.Pt(1,1),
-			Max: new_rect.Max,
-		},
-	).(*image.RGBA)
-
-	upscaled := images.ImageUpscaledByFactor(img, scaling_factor)
-	draw.Draw(big_subimage, new_rect, upscaled, image.Pt(-1,-1), draw.Src)
-
-	// Drawing all edges in black
-	all_indexes := [2][]int{
-		indexesAllScaled(img.Rect.Dy(), scaling_factor),
-		indexesAllScaled(img.Rect.Dx(), scaling_factor),
-	}
-	color_black := [4]uint8{0,0,0,255}
-	images.DrawGridlineRowsOnImage(img_big, all_indexes[0], color_black)
-	images.DrawGridlineColsOnImage(img_big, all_indexes[1], color_black)
-
-	return img_big
-
-}
 /*
 	Converts edge-detection indexes to indexes of edges on advanced scaled picture.
 */
